@@ -1,0 +1,59 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index df99fd0..f063d34 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -22,6 +22,7 @@ const PLAYWRITER_BIN = path.join(PLAYWRITER_DIR, 'bin.js');
+ const HOST = '127.0.0.1';
+ const IDLE_MS = Number(process.env.PLAYWRITER_IDLE_MS) || 300000;
+ const GRACE_MS = 5000;
++const LAUNCHER_BUILD = crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex').slice(0, 12);
+ const BLANK_GRACE_MS = 20000;
+ const blankSince = new Map();
+ const CHROME_TRIMS = [
+@@ -623,6 +624,8 @@ function runGate({ gate, debug }) {
+     process.exit(0);
+   };
+ 
++  const handOver = (reason) => exitGate(reason, { force: true, keepBrowser: true });
++
+   const exitUnleased = async () => {
+     graceTimer = null;
+     if (leaseHolders.size > 0) return;
+@@ -719,7 +722,12 @@ function runGate({ gate, debug }) {
+   const server = http.createServer((req, res) => {
+     const [route, query = ''] = req.url.split('?');
+     const params = new URLSearchParams(query);
+-    if (route === '/__pwp/ping') return res.end(JSON.stringify({ project: PROJECT, pid: process.pid }));
++    if (route === '/__pwp/ping') return res.end(JSON.stringify({ project: PROJECT, pid: process.pid, build: LAUNCHER_BUILD }));
++    if (route === '/__pwp/handoff') {
++      if (leaseHolders.size > 0) return res.writeHead(409).end(`${leaseHolders.size} lease(s) held\n`);
++      res.end('ok\n');
++      return setTimeout(() => handOver('handed over to a newer launcher'), 50);
++    }
+     if (route === '/__pwp/status') return respondJson(res, statusPayload({ pages: params.get('pages') !== '0' }));
+     if (route === '/__pwp/close' && req.method === 'POST') return respondJson(res, closeFromCaller(params));
+     if (route === '/__pwp/lease') {
+@@ -860,13 +868,21 @@ function runGate({ gate, debug }) {
+   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+     process.on(signal, () => exitGate(`signal ${signal}`, { force: true }));
+   }
++  if (process.platform !== 'win32') process.on('SIGUSR2', () => handOver('signal SIGUSR2'));
++}
++
++async function handedOver(port, ping) {
++  if (!ping.build || ping.build === LAUNCHER_BUILD) return false;
++  const reply = await httpGet(port, '/__pwp/handoff', 3000);
++  if (reply.status !== 200) return false;
++  return waitFor(async () => !(await httpOk(port, '/__pwp/ping', 500)), 15000);
+ }
+ 
+ async function ensureGate(port) {
+   const ping = await httpJson(port, '/__pwp/ping', 3000);
+   if (ping) {
+-    if (ping.project === PROJECT) return;
+-    throw new Error(`port ${port} is the gate for ${ping.project}, not ${PROJECT}. Delete ${path.join(STATE, 'port')} to pick a new port.`);
++    if (ping.project !== PROJECT) throw new Error(`port ${port} is the gate for ${ping.project}, not ${PROJECT}. Delete ${path.join(STATE, 'port')} to pick a new port.`);
++    if (!(await handedOver(port, ping))) return;
+   }
+   const out = fs.openSync(GATE_LOG, 'a');
+   const gate = spawn(process.execPath, [__filename, '--gate'], {

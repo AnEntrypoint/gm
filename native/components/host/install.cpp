@@ -140,6 +140,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher blank-tab grace", "bin/playwriter-project", "BLANK_GRACE_MS"},
     {"launcher keeps the first gate's browser when its port is taken", "bin/playwriter-project", "keepBrowser: true"},
     {"launcher reads the browser's websocket address with the probe's client", "bin/playwriter-project", "gave no websocket address"},
+    {"launcher hands an idle gate over to a newer launcher build", "bin/playwriter-project", "/__pwp/handoff"},
 };
 
 std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {
