@@ -543,5 +543,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-read-range-cap-hint",
+  "witness": "check-read-range-cap-hint",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "over_cap ? std::string(\"this reply is cut at 6000 characters in band, so a range with limit above 6000 is cut: page with read_file limit 6000 or less from the offset in nextOffset\") : ",
+    "to": "",
+    "count": 1
+   }
+  ]
  }
 ]

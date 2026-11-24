@@ -3767,7 +3767,9 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     result.set("outputPath", path);
     result.set("totalChars", static_cast<double>(total));
     result.set("omittedChars", static_cast<double>(omitted));
-    result.set("hint", name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
+    const Value* range_limit = args.find("limit");
+    const bool over_cap = name == "read_file" && range_limit != nullptr && range_limit->is_number() && range_limit->as_number() > static_cast<double>(kInlineVerbChars);
+    result.set("hint", over_cap ? std::string("this reply is cut at 6000 characters in band, so a range with limit above 6000 is cut: page with read_file limit 6000 or less from the offset in nextOffset") : name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
     result.set("lines", static_cast<double>(split_lines(text).size()));
     result.set("next", static_cast<double>(part.next));
     return result;

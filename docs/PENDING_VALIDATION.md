@@ -6011,3 +6011,19 @@ Ranked open work:
 - Fix: verbs.cpp sets the grep hint in the bound lambda, when a run_shell reply is truncated and its command is a grep or rg (the same regex as server.cpp's kSearchCommand). server.cpp is restored to its text before 0554b2e.
 - Red: red-grep-cut-hint now mutates native/components/verbs/verbs.cpp (the grep hint becomes the full: true hint); the check must then fail.
 - Witness: check-grep-cut-hint ok and red-grep-cut-hint RED_RC 1 with AFTER_RC 0, in the window run after this fix.
+
+### 63. Grep-cut change: re-measure date recorded (item 2, done condition open)
+
+- Item 2 (grep cut hint) is at b92afd4, pushed, with check-grep-cut-hint ok and red-grep-cut-hint RED_RC 1 / AFTER_RC 0; the installed build b92afd4-1 matches HEAD (versions/b92afd4-1 at 2026-11-25 01:23:45 host time; check-installed ok at 01:24).
+- Done condition: run_shell grep cut replies fall by half from 89 across peers on 11-22. Not measured yet. Do not re-measure before 2026-11-26: peers must work a full day on the installed build first. Measure with tools/journal-count.py on 2026-11-26 and later.
+
+### 64. read_file cut class: ranked list and item 1
+
+- Baseline 11-22 (read_file cut replies, peers' run logs): 56 = source file ranged 26, outputs artifact ranged 19, source file whole 11, outputs artifact whole 4. Ranged limit values: most at 20000, the largest read limit, which is above the 6000-character in-band cap. Omitted characters per cut: median 5379, max 45866. Reads of outputs artifacts: 39, of which 23 were cut again.
+- Ranked:
+  1. Ranged reads over the cap: a read with limit above 6000 is cut at 6000 in band; its hint must say the cap and point to nextOffset. Done: a ranged read with limit above 6000 says the cap and nextOffset, and the ranged cut count falls by half from 45 on 11-22. Witness: check-read-range-cap-hint ok, red-read-range-cap-hint RED_RC 1 with AFTER_RC 0, and the day-after count with tools/journal-count.py. Started: Phase A (this commit).
+  2. Rereads of cut outputs: 23 of 39 reads of outputs artifacts were cut again. Done: a read of an outputs artifact with a limit at or below 6000 is never cut, and the cut rereads fall to 0. Witness: a check of the artifact read with limit 6000, and the day-after count.
+  3. Whole-file reads of source files (11): done when a whole read of a file over the cap gives the cap and offset guidance without full: true. Witness: check and red.
+  4. Owner decision: raise the in-band cap above 6000 characters. Held for the owner; not started.
+  5. Owner decision: the cap for read_file by unit (lines or characters). Held for the owner; not started.
+- Phase A for item 1 is this commit: the check, its red, and the hint change in native/components/mcp/server.cpp. Not compiled and not run here: the host is not settled for a window, and the window compiles and runs them.
