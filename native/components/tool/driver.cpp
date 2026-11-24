@@ -328,7 +328,7 @@ private:
         {
             std::lock_guard lock(state_mutex_);
             timings_.push_back({job.name, wall});
-            durations_[job.name] = wall;
+            if (ok) durations_[job.name] = wall;
             if (ok) {
                 if (stub) {
                     stubbed_.push_back(job.name);

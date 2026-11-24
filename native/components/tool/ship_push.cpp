@@ -73,6 +73,14 @@ bool make_copy(const fs::path& root, const fs::path& copy, const std::string& co
            succeeded(run_in(copy, {"git", "-c", "user.name=gm-tool", "-c", "user.email=gm-tool@localhost", "commit", "-q", "-m", "tar copy of " + commit}));
 }
 
+void carry_durations(const fs::path& from, const fs::path& to) {
+    std::error_code ec;
+    const fs::path file = fs::path("build") / "release" / "phase-b-durations.txt";
+    if (!fs::exists(from / file, ec)) return;
+    fs::create_directories((to / file).parent_path(), ec);
+    fs::copy_file(from / file, to / file, fs::copy_options::overwrite_existing, ec);
+}
+
 bool enough_space(const fs::path& where) {
     const char* floor_env = std::getenv("GM_SHIP_MIN_FREE_GB");
     const std::uintmax_t floor_gb = floor_env != nullptr && *floor_env != '\0' ? static_cast<std::uintmax_t>(std::atoll(floor_env)) : kMinFreeGb;
@@ -98,6 +106,7 @@ bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
         std::puts("phase-b: could not make the tar copy of HEAD");
         return false;
     }
+    carry_durations(root, copy);
     bool ok = false;
     if (seamed) {
         const auto outcome = run_in(copy, {"sh", "-c", seam});
@@ -111,6 +120,7 @@ bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
     }
     std::error_code ec;
     if (ok) {
+        carry_durations(copy, root);
         fs::remove_all(copy, ec);
         fs::remove(copy.string() + kShipCopyMarkerSuffix, ec);
     } else {

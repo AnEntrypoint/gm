@@ -81,7 +81,10 @@ CheckResult check_ship_push(const std::string& binary) {
 
     commit_file(work, "a.txt", "one\n");
     const std::string first = local_head();
-    auto outcome = push("true");
+    const fs::path seen = sandbox / "durations-seen.txt";
+    fs::create_directories(work / "build" / "release", ec);
+    put(work / "build" / "release" / "phase-b-durations.txt", "check-seeded 77.0\n");
+    auto outcome = push("cp build/release/phase-b-durations.txt " + seen.string() + " && printf 'check-measured 5.5\\n' > build/release/phase-b-durations.txt");
     expect(outcome.exit_code == 0 && outcome.out.find("PUSHED " + first) != std::string::npos, "a new commit was not pushed through ship --push with a passing Phase B on the copy: " + outcome.out.substr(0, 400));
     expect(remote_head() == first, "the remote does not hold the pushed commit " + first);
     expect(outcome.out.find("CI: not applicable") != std::string::npos, "the CI result after the push was not reported as not applicable for a remote that is not GitHub: " + outcome.out.substr(0, 400));
@@ -91,6 +94,9 @@ CheckResult check_ship_push(const std::string& binary) {
     std::getline(marker, marked_commit);
     std::getline(marker, marked_tree);
     expect(marked_commit == first && marked_tree == line(git(work, {"rev-parse", "HEAD^{tree}"})), "the Phase B marker does not name HEAD and its tree id: " + marked_commit + " " + marked_tree);
+
+    expect(read_text(seen) == "check-seeded 77.0\n", "the copy did not start from the checkout's recorded check seconds, so Phase B on it orders its checks by a flat 30 s: " + read_text(seen));
+    expect(read_text(work / "build" / "release" / "phase-b-durations.txt") == "check-measured 5.5\n", "the seconds a passing Phase B measured on the copy were not carried back to the checkout: " + read_text(work / "build" / "release" / "phase-b-durations.txt"));
 
     commit_file(work, "b.txt", "two\n");
     const std::string second = local_head();
