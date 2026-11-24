@@ -519,5 +519,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-job-wait-batch",
+  "witness": "check-job-wait-batch",
+  "file": "native/components/verbs/job.cpp",
+  "edits": [
+   {
+    "from": "            wait_ms = std::max(0.0, requested_ms);",
+    "to": "            wait_ms = 0;",
+    "count": 1
+   }
+  ]
  }
 ]
