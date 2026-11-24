@@ -562,8 +562,8 @@
   "file": "native/components/mcp/server.cpp",
   "edits": [
    {
-    "from": " || lines_page;",
-    "to": ";",
+    "from": "result.set(\"hint\", lines_page ? std::string(\"this reply is cut at 6000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 6000 or less from the offset in nextOffset\") : over_cap ? std::string(",
+    "to": "result.set(\"hint\", over_cap ? std::string(",
     "count": 1
    }
   ]

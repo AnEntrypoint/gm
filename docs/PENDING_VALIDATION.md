@@ -6037,3 +6037,8 @@ Ranked open work:
 - Red: red-read-lines-cap-hint removes the lines branch from the cap condition; the check must then fail.
 - Done condition (measured later, not in the check): cut rereads of outputs artifacts fall to 0 from 23 on 11-22, measured by tools/journal-count.py after peers work a day on the installed build from 451698c or later. Not measured now.
 - Not compiled or run in Phase A.
+
+### 66. Item 2 window 1: the line-page hint text fixed (Phase A fix)
+
+- Window 1 of 27ee85a: compile ok (BUILD_RC 0); check-read-lines-cap-hint failed: a cut line page got the item-1 text ("page with read_file limit 6000 or less"), which is wrong for lines and does not name unit chars. The red then restored the item-1 text too, so AFTER_RC 1.
+- Fix: a line page (ranged, not unit chars) gets its own hint, naming the 6000-character cap, unit chars and nextOffset; the item-1 text stays for character pages. red-read-lines-cap-hint now removes the line-page branch from the hint.
