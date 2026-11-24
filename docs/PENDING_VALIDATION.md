@@ -5995,3 +5995,12 @@ Ranked open work:
 - Witness: check-job-wait-batch ok, in the Phase B window when the host is settled. Not run in Phase A (the host was swapping at about 30 MB/s).
 - Red: red-job-wait-batch in tools/phase-b/reds.json sets the shell-job wait to zero in native/components/verbs/job.cpp (wait_ms = 0), so job_status returns at once with state running; the check must then fail.
 - Open question for the window: if the body's verb calls do not run concurrently, the check fails on time (about 6 s), which is the finding item 1 is meant to close.
+
+### 61. Cut replies from run_shell: a grep that is cut names gm.grep, not full: true (Phase A, not run)
+
+- Item 2 of the ranked gm work. Baseline 11-22 (tools/journal-count.py day; cut replies with the gm-cut marker, read from each peer's run logs): run_shell 174 (fx 93, bevy 69, thebird 6, oscraft 6), by command class: grep or rg 89, cat, sed, head or tail 51, other 33; read_file 56 (45 with a range, 15 without). The gm run's own count was 3 grep.
+- Change: native/components/mcp/server.cpp gives a run_shell grep that is cut the hint "gm.grep with pattern, root and limit returns the matching lines bounded, and outputPath holds the whole text", in place of the full: true hint. full: true returns the whole grep output in one reply, which costs the most tokens; gm.grep returns a bounded number of hits. The dump class and read_file keep their hints; they are not changed by this item.
+- Check: check-grep-cut-hint (native/components/tool/checks/grep_cut_hint.cpp, registered in checks.def) runs a grep over 400 lines through run_shell and passes when the reply is cut in band and its hint names gm.grep.
+- Red: red-grep-cut-hint in tools/phase-b/reds.json restores the full: true hint for a cut grep; the check must then fail.
+- Not verified here: server.cpp and the check were not compiled in Phase A (the host is in a swap-in storm). The window compiles and runs both.
+- Done condition for the item (measured, not in the check): run_shell cut replies with a grep command per peer per day fall by half from 89 per 11-22 across peers, by tools/journal-count.py run after peers work a day on the installed build.
