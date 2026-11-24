@@ -6004,3 +6004,10 @@ Ranked open work:
 - Red: red-grep-cut-hint in tools/phase-b/reds.json restores the full: true hint for a cut grep; the check must then fail.
 - Not verified here: server.cpp and the check were not compiled in Phase A (the host is in a swap-in storm). The window compiles and runs both.
 - Done condition for the item (measured, not in the check): run_shell cut replies with a grep command per peer per day fall by half from 89 per 11-22 across peers, by tools/journal-count.py run after peers work a day on the installed build.
+
+### 62. Item 61 was in the wrong layer; the grep hint now comes from the run_shell verb
+
+- Found by the window of 0554b2e (check-grep-cut-hint: 1 failure, the hint did not name gm.grep). The probe of the built binary showed why: run_shell's reply carries compressed, originalChars, keptChars, droppedLines (native/components/verbs/verbs.cpp, cut_or_condense), so the output is cut in the verb before gm's bounded_output runs. bounded_output then sees at most 6000 characters, returns early, and sets no hint.
+- Fix: verbs.cpp sets the grep hint in the bound lambda, when a run_shell reply is truncated and its command is a grep or rg (the same regex as server.cpp's kSearchCommand). server.cpp is restored to its text before 0554b2e.
+- Red: red-grep-cut-hint now mutates native/components/verbs/verbs.cpp (the grep hint becomes the full: true hint); the check must then fail.
+- Witness: check-grep-cut-hint ok and red-grep-cut-hint RED_RC 1 with AFTER_RC 0, in the window run after this fix.

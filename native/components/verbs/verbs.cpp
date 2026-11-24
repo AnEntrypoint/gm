@@ -830,6 +830,10 @@ struct CoreVerbs::Impl {
         const auto bound = [&](json::Value reply) {
             json::Value shaped = cut_or_condense(std::move(reply));
             if (shaped.find("truncated") == nullptr) shaped.set("truncated", false);
+            if (const json::Value* cut = shaped.find("truncated"); cut->is_bool() && cut->as_bool()) {
+                static const std::regex kSearchCommand(R"((^|[\s|&;(])(grep|rg)\s)");
+                if (std::regex_search(command->as_string(), kSearchCommand)) shaped.set("hint", "this reply is cut; gm.grep with pattern, root and limit returns the matching lines bounded, and outputPath holds the whole text");
+            }
             if (shaped.find("complete") == nullptr) shaped.set("complete", true);
             if (shaped.find("exitCode") == nullptr) shaped.set("exitCode", nullptr);
             if (shaped.find("signal") == nullptr) shaped.set("signal", nullptr);
