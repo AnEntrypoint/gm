@@ -1,0 +1,28 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index d71280c..c32fac6 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -606,12 +606,12 @@ function runGate({ gate, debug }) {
+   };
+ 
+   let exiting = false;
+-  const exitGate = async (reason, { force = false } = {}) => {
++  const exitGate = async (reason, { force = false, keepBrowser = false } = {}) => {
+     if (exiting || (!force && leaseHolders.size > 0)) return;
+     exiting = true;
+     await starting?.catch(() => {});
+     try {
+-      await releaseBrowser(reason);
++      if (!keepBrowser) await releaseBrowser(reason);
+     } catch (error) {
+       log(`stopping the browser failed: ${error.message}`);
+     }
+@@ -843,7 +843,7 @@ function runGate({ gate, debug }) {
+   };
+ 
+   server.on('error', (error) => {
+-    exitGate(`gate listen failed on ${gate}: ${error.message}`, { force: true });
++    exitGate(`gate listen failed on ${gate}: ${error.message}`, { force: true, keepBrowser: true });
+   });
+   server.listen(gate, HOST, () => {
+     log(`gate on ${gate}, browser debug port ${debug}, idle ${IDLE_MS}ms`);
