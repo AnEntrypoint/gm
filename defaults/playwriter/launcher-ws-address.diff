@@ -1,0 +1,14 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index eaa4e82..df99fd0 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -703,7 +703,8 @@ function runGate({ gate, debug }) {
+   };
+ 
+   const currentBrowserPath = async () => {
+-    const info = await fetch(`http://${HOST}:${debug}/json/version`).then((res) => res.json());
++    const info = await httpJson(debug, '/json/version', 3000);
++    if (!info?.webSocketDebuggerUrl) throw new Error(`the browser on debug port ${debug} gave no websocket address`);
+     return new URL(info.webSocketDebuggerUrl).pathname;
+   };
+ 

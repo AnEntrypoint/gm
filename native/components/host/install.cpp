@@ -139,6 +139,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher sanitized 503 text", "bin/playwriter-project", "res.end(startReason(error.message))"},
     {"launcher blank-tab grace", "bin/playwriter-project", "BLANK_GRACE_MS"},
     {"launcher keeps the first gate's browser when its port is taken", "bin/playwriter-project", "keepBrowser: true"},
+    {"launcher reads the browser's websocket address with the probe's client", "bin/playwriter-project", "gave no websocket address"},
 };
 
 std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {

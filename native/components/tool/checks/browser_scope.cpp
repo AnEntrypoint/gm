@@ -392,7 +392,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                     const json::Value got = output_of(opened);
                     const json::Value exec = part(got, "exec");
                     const json::Value tabs = part(got, "tabs");
-                    expect(flag(exec, "ok") && text_has(exec, "output", kMarker), "playwriter_execute did not open the marker page");
+                    expect(flag(exec, "ok") && text_has(exec, "output", kMarker), "playwriter_execute did not open the marker page: " + support::cause_of(json::dump(exec)));
                     expect(text_equals(tabs, "state", "changed") && text_has(tabs, "text", "tabs: 1 in this run"), "browser_tabs did not list the run's page");
 
                     Session peer({installed.string(), "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "peer").string()}, workspace, home, 900000);
@@ -523,6 +523,8 @@ CheckResult check_browser_scope(const std::string& binary) {
     } else {
         const fs::path logs = workspace / ".playwriter";
         result.failures.push_back("the gate log is kept at " + (logs / "gate.log").string() + " and the browser log at " + (logs / "browser.log").string() + "; the sandbox " + sandbox.string() + " is kept with them");
+        result.failures.push_back("gate log tail: " + support::tail_of(read_text(logs / "gate.log"), 1500));
+        result.failures.push_back("browser log tail: " + support::tail_of(read_text(logs / "browser.log"), 1000));
     }
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     const std::string load_note = "host load (1 min) " + load_at_start + " at start, " + host_load() + " at end";
