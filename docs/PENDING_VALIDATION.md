@@ -6027,3 +6027,13 @@ Ranked open work:
   4. Owner decision: raise the in-band cap above 6000 characters. Held for the owner; not started.
   5. Owner decision: the cap for read_file by unit (lines or characters). Held for the owner; not started.
 - Phase A for item 1 is this commit: the check, its red, and the hint change in native/components/mcp/server.cpp. Not compiled and not run here: the host is not settled for a window, and the window compiles and runs them.
+
+### 65. read_file item 2: rereads of cut outputs come from line pages (Phase A, not run)
+
+- Facts (11-22): 39 reads of outputs artifacts, 23 cut again. Of the 23 cut reads: unit chars 17 (limit 20000 x6, 15000 x2, 12000, 11000, 9000, 7000 x2 with offset), unit absent (default lines) 6, including limit 400 with offset 1, which was cut at about 5349 characters.
+- Cause: read_file's default unit is lines (read_file description: "Lines are the default unit"; verbs.cpp: unit defaults to "lines"). A line page of 400 lines of long lines is far above the 6000-character in-band cap, and the cut hint (item 1) only fired for a numeric limit above 6000, so a line page got the generic hint and peers reread the artifact with another range.
+- Change: native/components/mcp/server.cpp: a cut read_file page that is ranged and has no unit "chars" gets the cap hint (the same text as item 1: the cap, unit chars and nextOffset). The hint is set only when bounded_output cuts the page.
+- Check: check-read-lines-cap-hint (native/components/tool/checks/read_lines_cap_hint.cpp) reads 40 lines of 300 characters by default unit and passes when the reply is cut in band and its hint names unit chars and the 6000-character cap.
+- Red: red-read-lines-cap-hint removes the lines branch from the cap condition; the check must then fail.
+- Done condition (measured later, not in the check): cut rereads of outputs artifacts fall to 0 from 23 on 11-22, measured by tools/journal-count.py after peers work a day on the installed build from 451698c or later. Not measured now.
+- Not compiled or run in Phase A.

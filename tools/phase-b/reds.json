@@ -555,5 +555,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-read-lines-cap-hint",
+  "witness": "check-read-lines-cap-hint",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": " || lines_page;",
+    "to": ";",
+    "count": 1
+   }
+  ]
  }
 ]
