@@ -6150,3 +6150,10 @@ Disk written by gm (measured 2026-11-25, /config at 94 percent, 13 GB free):
 - runs about 0.3 MB each; gate.log 13 KB and browser.log 1.5 MB (docstudio), growing about 230 KB a day, with no rotation.
 
 Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 assertions), check-red-report; check-ship-push now asserts a red Phase B leaves no copy. The Windows change has no witness on this host: the next Windows jobs must reach the Worker binary versions step and pass its version assertion (gm.exe and gm-core.exe print the build version first, as 2e89058-613 did in release 45601313491).
+
+### Item 5 of the ranked list above, done: the browser profile's caches are bounded
+
+- Change: defaults/playwriter/launcher-zz-cache-trim.diff (applied last, sorted after launcher-ws-handoff.diff) adds trimProfileCaches: before a browser starts, when Default/Cache, Default/Code Cache and Default/GPUCache together exceed PLAYWRITER_CACHE_LIMIT_MB (default 200), the three directories are removed and the gate log says so. Cookies, history, IndexedDB, service workers and every other profile file stay. Hook "launcher keeps the browser profile's caches under a limit" (needle trimProfileCaches) in install.cpp, the offline fake git needle in checks/support.hpp.
+- Check: check-browser-profile-cache starts a real gate in a scratch project twice with 3 MB of seeded cache: a limit of 1 MB removes it, a limit of 100 MB leaves it, and a seeded file outside the caches survives both. Red before the diff was installed (2 failures: the cache stayed, no trim line in the gate log); green after gm install --local; check-launcher-refresh, check-browser-ws-address, check-gate-handoff and check-browser-second-gate stay green with the diff in.
+- Effect on running gates: none until a gate starts a browser with the new launcher; the docstudio gate (pid 37204) still runs the old launcher, so its 520 MB of caches stay until its gate is replaced (the handoff proposal from the 2026-11-24 round); nothing was done to it.
+- Not bounded: browser.log (no rotation; 230 KB a day) and gate.log; both are small.

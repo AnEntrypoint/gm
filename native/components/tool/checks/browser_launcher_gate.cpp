@@ -57,7 +57,7 @@ struct Context {
 
 using GateBody = std::function<void(const StartedGate&, const Context&, CheckResult&)>;
 
-CheckResult with_started_gate(const std::string& label, const std::vector<std::string>& extra_env, const GateBody& body) {
+CheckResult with_started_gate(const std::string& label, const std::vector<std::string>& extra_env, const GateBody& body, const std::function<void(const fs::path&)>& seed = {}) {
     CheckResult result;
     const std::string chromium = chromium_binary();
     if (chromium.empty()) {
@@ -102,6 +102,7 @@ CheckResult with_started_gate(const std::string& label, const std::vector<std::s
         return known == before.end() || known->second != proc::start_time_of(pid);
     };
     std::vector<long long> roots;
+    if (seed) seed(workspace);
     const auto started = launcher_run("start", 120000);
     if (!started.started || started.exit_code != 0 || started.err.find("browser ready") == std::string::npos) {
         result.failures.push_back("start did not report a ready browser: " + started.err.substr(0, 300));
@@ -296,6 +297,40 @@ CheckResult check_browser_ws_address(const std::string&) {
     fs::remove(preload, ec);
     return result;
 }
+
+namespace {
+
+void seed_profile_caches(const fs::path& workspace) {
+    const fs::path profile = workspace / ".playwriter" / "browser-profile" / "Default";
+    for (const char* name : {"Cache", "Code Cache"}) {
+        fs::create_directories(profile / name);
+        std::ofstream(profile / name / "old-entry", std::ios::binary) << std::string(1536 * 1024, 'c');
+    }
+    std::ofstream(profile / "kept-state", std::ios::binary) << "login state";
+}
+
+CheckResult profile_cache_case(const std::string& label, const std::string& limit_mb, bool expect_trim) {
+    return with_started_gate(label, {"PLAYWRITER_CACHE_LIMIT_MB=" + limit_mb}, [expect_trim, limit_mb](const StartedGate&, const Context& context, CheckResult& inner) {
+        const fs::path profile = context.workspace / ".playwriter" / "browser-profile" / "Default";
+        const bool entry_kept = fs::exists(profile / "Cache" / "old-entry") && fs::exists(profile / "Code Cache" / "old-entry");
+        const bool state_kept = read_text(profile / "kept-state") == "login state";
+        const std::string log = read_text(context.workspace / ".playwriter" / "gate.log");
+        if (!state_kept) inner.failures.push_back("a file of the profile outside the caches was removed by the cache trim");
+        if (expect_trim && entry_kept) inner.failures.push_back("3 MB of cache against a limit of " + limit_mb + " MB was still there after the browser started; gate log: " + support::tail_of(log, 500));
+        if (expect_trim && log.find("profile caches were") == std::string::npos) inner.failures.push_back("the gate log does not say the caches were trimmed: " + support::tail_of(log, 500));
+        if (!expect_trim && !entry_kept) inner.failures.push_back("3 MB of cache under a limit of " + limit_mb + " MB was removed");
+    }, seed_profile_caches);
+}
+
+}
+
+CheckResult check_browser_profile_cache(const std::string&) {
+    CheckResult result = profile_cache_case("cache-over", "1", true);
+    CheckResult under = profile_cache_case("cache-under", "100", false);
+    for (const std::string& failure : under.failures) result.failures.push_back(failure);
+    if (result.failures.empty()) result.summary = "a browser start removes the profile's Cache and Code Cache when they exceed PLAYWRITER_CACHE_LIMIT_MB (3 MB against 1 MB) and leaves them under it (3 MB against 100 MB), and never touches a profile file outside the caches";
+    return result;
+}
 }
 #else
 
@@ -314,6 +349,12 @@ CheckResult check_browser_ws_address(const std::string&) {
 }
 
 CheckResult check_gate_handoff(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_profile_cache(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

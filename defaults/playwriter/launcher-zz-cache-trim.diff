@@ -1,0 +1,41 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index f063d34..4e14787 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -354,6 +354,28 @@ async function resolveBrowser() {
+   }
+ }
+ 
++const PROFILE_CACHES = ['Cache', 'Code Cache', 'GPUCache'];
++const CACHE_LIMIT_BYTES = (Number(process.env.PLAYWRITER_CACHE_LIMIT_MB) || 200) * 1048576;
++
++function treeBytes(target) {
++  let total = 0;
++  try {
++    for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
++      const child = path.join(target, entry.name);
++      total += entry.isDirectory() ? treeBytes(child) : fs.statSync(child).size;
++    }
++  } catch {}
++  return total;
++}
++
++function trimProfileCaches(log) {
++  const dirs = PROFILE_CACHES.map((name) => path.join(PROFILE, 'Default', name));
++  const bytes = dirs.reduce((sum, dir) => sum + treeBytes(dir), 0);
++  if (bytes <= CACHE_LIMIT_BYTES) return;
++  for (const dir of dirs) fs.rmSync(dir, { recursive: true, force: true });
++  log(`profile caches were ${Math.round(bytes / 1048576)} MB, over ${Math.round(CACHE_LIMIT_BYTES / 1048576)} MB; removed ${PROFILE_CACHES.join(', ')}`);
++}
++
+ function seedLabs(profile, labs) {
+   fs.mkdirSync(profile, { recursive: true });
+   const file = path.join(profile, 'Local State');
+@@ -444,6 +466,7 @@ function runGate({ gate, debug }) {
+       if (await waitFor(probe, 30000)) return adopt(false);
+       throw new Error(`profile ${PROFILE} is held by live pid ${owner}, which does not answer on port ${debug}; not starting another browser`);
+     }
++    trimProfileCaches(log);
+     if (process.env.PLAYWRITER_WEBGPU === '1') seedLabs(PROFILE, WEBGPU_LABS);
+     const bin = await resolveBrowser();
+     const args = [
