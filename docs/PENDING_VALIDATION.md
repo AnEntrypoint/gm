@@ -6101,3 +6101,12 @@ Ranked open work:
 - Remaining in item 4, not addressed here: the misc commands (wc, ls, nl, awk; a handful on 11-22). Their class witness is a separate check, not started.
 - Done condition (item 4, script part): script-run cut replies with no hint fall to 0 from about 6 on 11-22, measured with tools/journal-count.py on 2026-11-26 or later.
 - Not compiled or run in Phase A.
+
+### 72. run_shell other class, misc commands (ls, wc, nl, awk): the hint names outputPath and gm.read_file (Phase A, not run)
+
+- Ranked item 4, the misc part: ls, wc, nl and awk replies that were cut and had no other hint (a handful on 11-22). Classified by the command text of each journal event; the rest of the other class is covered by items 69 to 71 (dump with separators, script runs).
+- Change: native/components/verbs/verbs.cpp: a cut reply of ls, wc, nl or awk that has no other hint gets "this reply is cut: outputPath holds all of it, so page it with gm.read_file, offset and limit in lines".
+- Check: check-run-shell-misc-hint (native/components/tool/checks/run_shell_misc_hint.cpp, registered in checks.def) lists a directory of 300 entries with ls and passes when the reply is cut in band and its hint names outputPath and gm.read_file.
+- Red: red-run-shell-misc-hint removes the misc block; the check must then fail.
+- Done condition (item 4, misc part): misc cut replies with no hint fall to 0 from the handful on 11-22, measured with tools/journal-count.py on 2026-11-26 or later.
+- Not compiled or run in Phase A.

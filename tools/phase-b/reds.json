@@ -627,5 +627,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-run-shell-misc-hint",
+  "witness": "check-run-shell-misc-hint",
+  "file": "native/components/verbs/verbs.cpp",
+  "edits": [
+   {
+    "from": "                static const std::regex kMiscCutCommand(R\"((^|;|&&|\\s)(ls|wc|nl|awk)\\s)\");\n                if (shaped.find(\"hint\") == nullptr && std::regex_search(command->as_string(), kMiscCutCommand)) shaped.set(\"hint\", \"this reply is cut: outputPath holds all of it, so page it with gm.read_file, offset and limit in lines\");\n",
+    "to": "",
+    "count": 1
+   }
+  ]
  }
 ]
