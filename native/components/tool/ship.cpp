@@ -79,7 +79,7 @@ int phase_b_command(const fs::path& root, const fs::path& build) {
         std::puts("phase-b: git rev-parse HEAD failed");
         return 1;
     }
-    const auto short_head = git_output(root, {"rev-parse", "--short", "HEAD"});
+    const auto short_head = git_output(root, {"rev-parse", "--short=7", "HEAD"});
     const bool ci_shape = short_head && built_stamp.rfind(trimmed(*short_head) + "-", 0) == 0;
     if (built_stamp != *tree_stamp && !ci_shape) {
         std::printf("phase-b: built stamp '%s' does not match the tree stamp '%s'\n", built_stamp.c_str(), tree_stamp->c_str());

@@ -6205,3 +6205,11 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: tools/phase-b/reds.json red-cut-full-hint mutates the dump hint in verbs.cpp (the one line that names gm.read_file paging) to name full: true instead. The check must then fail, because its dump no longer names gm.read_file, offset and limit in lines.
 - Witness: red-cut-full-hint RED_RC=1 AFTER_RC=0 in a window on the commit that carries this item.
 - Not run in Phase A.
+
+### 77. Build stamp: the abbreviation is pinned to 7 characters, so a red's -1 override is honoured (Phase A, not run)
+
+- Found when red-update-checked, red-collision, red-manifest, red-unknown and red-relay-reexec failed in the Phase B window of 72569ff5 (phase-rc29, reds1) and still failed alone. The mutated build reported e8eb16006cce-dev: cmake/gmnew_stamp.cmake applies the OVERRIDE only when it begins with the short HEAD as git prints it, and git's default abbreviation now prints 8 characters in this repository (its length grows with the object count). red.py and window.sh pass --short=7, so the override never matched, the build was stamped -dev, and the update checks skipped as development builds (a pass under the mutation).
+- Change: cmake/gmnew_stamp.cmake reads HEAD with --short=7; native/components/tool/ship.cpp and ship_push.cpp read it with --short=7 (ship compares the built stamp with it).
+- Check: check-stamp-override (native/components/tool/checks/stamp_override.cpp, registered in checks.def) runs the stamp script on the checkout with the 7-character override and passes when the header carries it.
+- Red: red-stamp-override restores the bare --short in the stamp script; the check must then fail.
+- Not compiled or run in Phase A.

@@ -1,5 +1,17 @@
 [
  {
+  "id": "red-stamp-override",
+  "witness": "check-stamp-override",
+  "file": "cmake/gmnew_stamp.cmake",
+  "edits": [
+   {
+    "from": "COMMAND \"${GIT_EXECUTABLE}\" rev-parse --short=7 HEAD",
+    "to": "COMMAND \"${GIT_EXECUTABLE}\" rev-parse --short HEAD",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-update-checked",
   "witness": "check-update-checked",
   "file": "native/components/host/relay.cpp",

@@ -4,7 +4,7 @@ set(head "unknown")
 set(committed "unknown")
 if(GIT_FOUND)
     execute_process(
-        COMMAND "${GIT_EXECUTABLE}" rev-parse --short HEAD
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --short=7 HEAD
         WORKING_DIRECTORY "${SOURCE_DIR}"
         OUTPUT_VARIABLE short_head
         OUTPUT_STRIP_TRAILING_WHITESPACE

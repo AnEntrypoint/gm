@@ -114,7 +114,7 @@ bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
         ok = succeeded(outcome);
         std::printf("phase-b: GM_SHIP_PHASE_B ran in the copy and %s\n", ok ? "passed" : "failed");
     } else {
-        const std::string version = git_line(copy, {"rev-parse", "--short", "HEAD"}) + "-1";
+        const std::string version = git_line(copy, {"rev-parse", "--short=7", "HEAD"}) + "-1";
         const auto configured = run_in(copy, {"cmake", "--preset", "release", "-DGMNEW_VERSION=" + version});
         if (!succeeded(configured)) std::printf("phase-b: configure of the copy failed: %s\n", configured.err.substr(0, 400).c_str());
         ok = succeeded(configured) && phase_b_command(copy, copy / "build" / "release") == 0;
