@@ -6042,3 +6042,17 @@ Ranked open work:
 
 - Window 1 of 27ee85a: compile ok (BUILD_RC 0); check-read-lines-cap-hint failed: a cut line page got the item-1 text ("page with read_file limit 6000 or less"), which is wrong for lines and does not name unit chars. The red then restored the item-1 text too, so AFTER_RC 1.
 - Fix: a line page (ranged, not unit chars) gets its own hint, naming the 6000-character cap, unit chars and nextOffset; the item-1 text stays for character pages. red-read-lines-cap-hint now removes the line-page branch from the hint.
+
+### 67. read_file item 3: whole reads of source files get the cap and offset paging, not full: true (Phase A, not run)
+
+- Ranked item 3 (after the line-page change at ced0909). Facts (11-22): 11 cut whole reads of source files (no offset or limit), against a cut hint that led with full: true, which returns the whole file in one reply.
+- Change: native/components/mcp/server.cpp: a whole read (no offset and no limit) that is cut gets the hint "page the file with read_file offset and limit, lines by default or unit chars, each page at most 6000 characters"; the full: true hint remains for other reads.
+- Check: check-read-whole-cap-hint (native/components/tool/checks/read_whole_cap_hint.cpp, registered in checks.def) reads an 8000-character file with no range and passes when the reply is cut in band, its hint gives the 6000-character cap and offset paging, and the hint does not say full: true.
+- Red: red-read-whole-cap-hint removes the whole-read branch; the check must then fail.
+- Done condition (measured later): cut whole reads of source files fall to 0 from 11 on 11-22, after peers work a day on a build with this commit.
+- Not compiled or run in Phase A; the window compiles and runs it.
+
+### Ranked list after item 3
+
+- Item 4 (owner decision): raise the in-band cap above 6000 characters. Not started; the owner decides.
+- Item 5 (owner decision, held): the cap by unit. Held for the owner; not started.

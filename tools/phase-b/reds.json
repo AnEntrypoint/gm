@@ -567,5 +567,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-read-whole-cap-hint",
+  "witness": "check-read-whole-cap-hint",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "whole_read ? std::string(\"this reply is cut at 6000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 6000 characters\") : ",
+    "to": "",
+    "count": 1
+   }
+  ]
  }
 ]
