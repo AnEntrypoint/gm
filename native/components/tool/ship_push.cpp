@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <sstream>
 #include <system_error>
@@ -124,7 +125,13 @@ bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
         fs::remove_all(copy, ec);
         fs::remove(copy.string() + kShipCopyMarkerSuffix, ec);
     } else {
-        std::printf("phase-b: the copy is kept at %s; logs in %s\n", copy.string().c_str(), (copy / "build" / "release" / "phase-b-logs").string().c_str());
+        const fs::path kept = root / "build" / "release" / "phase-b-logs-failed";
+        fs::remove_all(kept, ec);
+        fs::create_directories(kept.parent_path(), ec);
+        fs::copy(copy / "build" / "release" / "phase-b-logs", kept, fs::copy_options::recursive, ec);
+        std::printf("phase-b: the logs of the failed run are kept at %s; the copy %s is removed\n", kept.string().c_str(), copy.string().c_str());
+        fs::remove_all(copy, ec);
+        fs::remove(copy.string() + kShipCopyMarkerSuffix, ec);
     }
     return ok;
 }
@@ -214,7 +221,37 @@ int ci_after_push(const fs::path& root, const std::string& sha) {
 
 }
 
+void ensure_hooks_path(const fs::path& root) {
+    std::error_code ec;
+    if (!fs::exists(root / ".githooks" / "pre-push", ec)) return;
+    if (git_line(root, {"config", "--get", "core.hooksPath"}) == ".githooks") return;
+    git_output(root, {"config", "core.hooksPath", ".githooks"});
+}
+
+int pre_push_command(const fs::path& root) {
+    int status = 0;
+    for (std::string refs; std::getline(std::cin, refs);) {
+        std::istringstream words(refs);
+        std::string local_ref, local_sha, remote_ref, remote_sha;
+        words >> local_ref >> local_sha >> remote_ref >> remote_sha;
+        if (remote_ref != "refs/heads/main") continue;
+        if (local_sha.find_first_not_of('0') == std::string::npos) {
+            std::fputs("refused: main is not deleted from this checkout\n", stderr);
+            status = 1;
+            continue;
+        }
+        const std::string tree = git_line(root, {"rev-parse", local_sha + "^{tree}"});
+        if (marker_names_tree(root, tree)) continue;
+        const std::string who = git_line(root, {"log", "-1", "--format=%an: %s", local_sha});
+        std::fprintf(stderr, "refused: main at %.12s (%s) has no passing Phase B: %s names no run of tree %s.\nPush through the gate: build/release/native/components/tool/gm-tool ship --push (Phase B on a tar copy of HEAD, then the push)\n",
+                     local_sha.c_str(), who.c_str(), marker_path(root).string().c_str(), tree.c_str());
+        status = 1;
+    }
+    return status;
+}
+
 int ship_push(const fs::path& root) {
+    ensure_hooks_path(root);
     if (git_line(root, {"symbolic-ref", "--short", "-q", "HEAD"}) != "main") {
         std::puts("refused: ship pushes main only");
         return 1;

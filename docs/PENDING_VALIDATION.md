@@ -6128,3 +6128,25 @@ Ranked open work:
 - check-cut-marker: 068845fc raised kInlineVerbChars to 12000 (native/components/mcp/server.cpp) and left the check's 500-line, 10000-character source file under it, so a bounded read was no longer cut. Stale size, not a behaviour bug: the source file is now 1000 lines (20000 characters), above the cap; every assertion stays.
 - check-retry-hints: two stale expectations. (1) its 100-line cat of 10000 characters is below the run_shell cut threshold (200 lines or 16384 characters, as b108ff50 found for its own check); it is now 300 lines. (2) 3044b55e (2026-11-22) made a cut dump name full: true instead of ranged rereads, and 3d46687f (item 69, run_shell dump class) deliberately replaced that hint in verbs.cpp with "page the file with gm.read_file, offset and limit in lines, instead of cat, sed, head or tail through run_shell". The two decisions conflict in text; the later one is the intended behaviour, so the check now requires that hint and still forbids the "offset and limit gives the same lines" wording. Not weakened: a cut dump must still name a way to the rest, and ranged shell rereads stay forbidden. Whether the full: true hint should return for a cat is the other agent's measurement (item 69, due 2026-11-26); nothing here decides it.
 - Witness: check-cut-marker, check-retry-hints, check-run-shell-dump-hint and check-inline-cap-raised ok on this host; both first two failed at dccfdf1f.
+
+## Round 2026-11-25 ranked list after the green release 45601313491, and what was done
+
+Ranked, most valuable first (reachable in gm now):
+1. Every push of main gated the same way, whoever makes it (a red main stopped every non-Windows job for four releases while another agent's commits sat on it). Done: .githooks/pre-push and gm-tool pre-push.
+2. A red Phase B in CI names its commit, author and check at once. Done: gm-tool red-report and a CI step.
+3. The Windows jobs run the host build twice: Configure and build 423 s (arm64) and 567 s (x64), then Clean host rebuild 383 s and 541 s, of 986 s and 1134 s for the whole job. Done: the second build is gone and a version assertion replaces what it guarded.
+4. A failed ship kept a 2 GB copy until the next ship, on a disk at 94 percent. Done: the copy is removed and its logs are kept at build/release/phase-b-logs-failed.
+5. The browser profile grows without bound (not done in this stretch unless listed below): docstudio's 575 MB is Default/Cache 330 MB and Default/Code Cache 191 MB; the gm gate's own project profile is /config/.playwriter 209 MB (Code Cache 47 MB, Cache 43 MB). browser.log has no rotation (1.5 MB in docstudio's after a few weeks; relay-server.log does rotate to .1).
+6. x64 macOS runs Phase B for 856 s against 516 s on arm64 (Rosetta, 3 cores, 2 lanes, wall 742 s, check seconds summing to 1151 s; the sleeping checks check-job-wait-bounded 91 s, check-job-status-wait 86 s, check-version-prune 80 s, check-idle-cpu 68 s, check-job-wait 66 s are the longest). Not changed: fewer checks on the Intel build would cut coverage of the x86_64 binary and more lanes raised load on 3 cores (owner decision).
+7. Windows has no ccache (Configure and build 423 to 567 s every run); a ccache with /Z7 debug info is the next saving there. Not done: no Windows host here to try it.
+8. Not gm's, listed because they are on the same disk: /config/tmp holds 99 cdp-prof-* browser profiles of 14 to 16 MB (1.3 GB, all dated 2026-09-14, from agentplug) and /config/tmp/claude-1000/-config-docstudio holds 3 GB of session scratch; neither is touched.
+
+Disk written by gm (measured 2026-11-25, /config at 94 percent, 13 GB free):
+- build/release 1.9 GB (one build dir, replaced in place; phase-b-logs 588 KB; phase-b-logs-failed replaces itself on each failed ship).
+- ship copies gm-ship-<sha8>-<pid>: about 2 GB each while a ship runs; none left (a pass removes it, a failure now removes it, and the next ship or check sweeps a killed one by marker).
+- gm-tool check scratch g<pid>: 12 entries, 292 KB, swept by marker.
+- ~/.gmnew 158 MB (pw 129 MB, versions 30 MB; check-version-prune bounds versions).
+- phase-b-logs artifacts: 44 KB per failed job, retention 5 days; gm-tool and gmnew artifacts retention 1 day.
+- runs about 0.3 MB each; gate.log 13 KB and browser.log 1.5 MB (docstudio), growing about 230 KB a day, with no rotation.
+
+Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 assertions), check-red-report; check-ship-push now asserts a red Phase B leaves no copy. The Windows change has no witness on this host: the next Windows jobs must reach the Worker binary versions step and pass its version assertion (gm.exe and gm-core.exe print the build version first, as 2e89058-613 did in release 45601313491).

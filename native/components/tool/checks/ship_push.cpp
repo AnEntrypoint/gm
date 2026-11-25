@@ -67,12 +67,8 @@ CheckResult check_ship_push(const std::string& binary) {
     git(work, {"push", "-q", "-u", "origin", "main"});
     auto remote_head = [&] { return line(git(remote, {"rev-parse", "main"})); };
     auto local_head = [&] { return line(git(work, {"rev-parse", "HEAD"})); };
-    std::vector<std::string> copies;
     auto push = [&](const std::string& phase_b) {
         const auto outcome = proc::run({"env", "GM_SHIP_PHASE_B=" + phase_b, "GM_SHIP_CI_WAIT_MINUTES=0", tool.string(), "ship", "--push"}, work, {}, 120000);
-        const std::string kept = "the copy is kept at ";
-        const auto at = outcome.out.find(kept);
-        if (at != std::string::npos) copies.push_back(outcome.out.substr(at + kept.size(), outcome.out.find(';', at) - at - kept.size()));
         return outcome;
     };
     auto expect = [&](bool condition, const std::string& what) {
@@ -103,6 +99,11 @@ CheckResult check_ship_push(const std::string& binary) {
     outcome = push("false");
     expect(outcome.exit_code != 0 && outcome.out.find("Phase B did not pass") != std::string::npos, "a red Phase B on the copy did not refuse the push: " + outcome.out.substr(0, 300));
     expect(remote_head() == first, "a red Phase B still moved the remote");
+    const std::string removed_open = "the copy ";
+    const auto removed_at = outcome.out.find(removed_open);
+    const auto removed_end = removed_at == std::string::npos ? std::string::npos : outcome.out.find(" is removed", removed_at);
+    expect(removed_end != std::string::npos, "a red Phase B did not say its copy is removed: " + outcome.out.substr(0, 400));
+    if (removed_end != std::string::npos) expect(!fs::exists(outcome.out.substr(removed_at + removed_open.size(), removed_end - removed_at - removed_open.size())), "a red Phase B left its 2 GB copy on disk");
 
     const std::string second_tree = line(git(work, {"rev-parse", "HEAD^{tree}"}));
     fs::create_directories(work / "build" / "release", ec);
@@ -184,7 +185,6 @@ CheckResult check_ship_push(const std::string& binary) {
     std::tie(pending, waited_seconds) = push_with_ci({"GM_SHIP_CI_WAIT_MINUTES=1", "GM_SHIP_CI_POLL_SECONDS=1"});
     expect(pending.exit_code == 0 && pending.out.find("are green on " + sha) != std::string::npos, "GM_SHIP_CI_WAIT_MINUTES did not keep waiting until both runs were green: " + pending.out.substr(0, 500));
 
-    for (const std::string& copy : copies) fs::remove_all(copy, ec);
     fs::remove_all(sandbox, ec);
     result.summary = "ship --push in a scratch repo with a local bare remote pushes a new commit after Phase B on a tar copy and writes a marker for HEAD's tree id, reports CI as not applicable without GitHub, returns right after the push with the unconfirmed line (exit 2), the run ids and the gh command unless GM_SHIP_CI_WAIT_MINUTES asks for a wait, ends RED (exit 1) on a failed run, reuses a marker for the same tree, and refuses a red Phase B, a dirty tracked tree, a moved origin and a red gate without touching the remote";
     return result;

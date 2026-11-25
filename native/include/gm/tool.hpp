@@ -143,6 +143,8 @@ extern const char* const kShipCopyMarkerSuffix;
 std::size_t sweep_dead_scratch(const std::filesystem::path& temp);
 int ship_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int ship_push(const std::filesystem::path& root);
+int pre_push_command(const std::filesystem::path& root);
+int red_report_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int installed_command(const std::filesystem::path& root);
 int package_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int release_manifest_command(const std::vector<std::string>& args);

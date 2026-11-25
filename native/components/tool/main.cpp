@@ -23,6 +23,8 @@ int usage() {
                "       gm-tool gate\n"
                "       gm-tool phase-b [build dir]\n"
                "       gm-tool ship \"<subject>\" <paths...>  |  gm-tool ship --push\n"
+               "       gm-tool pre-push  (the git pre-push hook, reads the pushed refs on stdin)\n"
+               "       gm-tool red-report <phase-b log> [phase-b-logs dir]\n"
                "       gm-tool installed\n"
                "       gm-tool package --target <t> --build-dir <dir> --out <dir>\n"
                "       gm-tool release-manifest --dir <dir> --version <v> --commit <sha> --repo <r> [--previous f] [--present f] [--summary f]\n"
@@ -139,6 +141,8 @@ int main(int argc, char** argv) {
         return gm::tool::phase_b_command(root, std::filesystem::absolute(build));
     }
     if (command == "ship") return gm::tool::ship_command(root, std::vector<std::string>(args.begin() + 1, args.end()));
+    if (command == "pre-push") return gm::tool::pre_push_command(root);
+    if (command == "red-report") return gm::tool::red_report_command(root, std::vector<std::string>(args.begin() + 1, args.end()));
     if (command == "installed") return gm::tool::installed_command(root);
     if (command == "package") return gm::tool::package_command(root, args);
     if (command == "release-manifest") return gm::tool::release_manifest_command(args);

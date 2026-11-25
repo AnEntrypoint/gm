@@ -114,6 +114,10 @@ jobs:
           else
             build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }} | tee "$RUNNER_TEMP/phase-b.log"
           fi
+      - name: Name the red check
+        if: failure() && inputs.checks == ''
+        shell: bash
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool red-report "$RUNNER_TEMP/phase-b.log" build/${{ matrix.preset }}/phase-b-logs || true
       - name: Phase B logs of a failed run
         if: failure()
         uses: actions/upload-artifact@v4
@@ -202,24 +206,22 @@ jobs:
         run: |
           grep -E '^GMNEW_(COMMIT|VERSION):' "build/${{ matrix.preset }}/CMakeCache.txt"
           awk '/"command":/ { cmd = $0 } /"file":/ { f = $0; sub(/.*"file": *"/, "", f); sub(/".*/, "", f); if (f ~ /main\.cpp$/) { out = f; s = cmd; while (match(s, /-DGMNEW_BUILD_[A-Z_]+=[^ "\\]+/)) { out = out " " substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }; print out } cmd = "" }' "build/${{ matrix.preset }}/compile_commands.json"
-      - name: Clean host rebuild
-        shell: bash
-        run: |
-          cmake --build "build/${{ matrix.preset }}" --target gm gm-core --clean-first
-          cmake --build "build/${{ matrix.preset }}" --target gm-tool
       - name: Worker binary versions
         shell: bash
         run: |
           dir="build/${{ matrix.preset }}/native/components/host"
           echo "git head: $(git rev-parse --short HEAD)"
+          stale=0
           for name in gm.exe gm-core.exe; do
             p="$dir/$name"
-            if [ ! -f "$p" ]; then echo "$name: absent"; continue; fi
+            if [ ! -f "$p" ]; then echo "$name: absent"; stale=1; continue; fi
             if v=$("$p" --version 2>/dev/null); then :; else v="version failed"; fi
             size=$(wc -c < "$p" | tr -d ' ')
             mtime=$(date -u -r "$p" +%Y-%m-%dT%H:%M:%S.000Z)
             echo "$name: $v size=$size mtime=$mtime"
+            case "$v" in "$GMNEW_VERSION "*) ;; *) echo "$name does not carry the build version $GMNEW_VERSION: a stale binary was linked"; stale=1 ;; esac
           done
+          exit $stale
       - name: Windows cmd-only run_shell witness
         shell: bash
         run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe check "build/${{ matrix.preset }}/native/components/host/gm.exe" witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter
