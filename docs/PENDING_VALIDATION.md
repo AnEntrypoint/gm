@@ -6198,3 +6198,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: tools/phase-b/reds.json red-run-shell-dump-hint now removes the current two lines (the kDumpCutCommand regex and its shaped.set hint) at verbs.cpp.
 - Witness: red-run-shell-dump-hint RED_RC=1 AFTER_RC=0 in a Phase B window on the commit that carries this item (the other 53 reds passed in phase-rc27).
 - Not run in Phase A.
+
+### 76. red-cut-full-hint retargeted to the dump hint it can reach (Phase A, not run)
+
+- Found by the Phase B window of 61ed1d3 (phase-rc28, reds2: FAILED red-red-cut-full-hint, RED_RC=0: check-retry-hints passed under the mutation). Origin's 2e89058 changed check-retry-hints to assert that a cut dump names gm.read_file paging (its hint, "gm.read_file, offset and limit in lines"). The red's mutation targeted the range line in server.cpp bounded_output, which a cut cat no longer reaches (the dump reply is shaped in verbs.cpp), so the mutation changed nothing the check reads.
+- Change: tools/phase-b/reds.json red-cut-full-hint mutates the dump hint in verbs.cpp (the one line that names gm.read_file paging) to name full: true instead. The check must then fail, because its dump no longer names gm.read_file, offset and limit in lines.
+- Witness: red-cut-full-hint RED_RC=1 AFTER_RC=0 in a window on the commit that carries this item.
+- Not run in Phase A.

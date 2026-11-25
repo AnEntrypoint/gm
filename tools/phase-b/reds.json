@@ -415,11 +415,11 @@
  {
   "id": "red-cut-full-hint",
   "witness": "check-retry-hints",
-  "file": "native/components/mcp/server.cpp",
+  "file": "native/components/verbs/verbs.cpp",
   "edits": [
    {
-    "from": "\"[gm: the same run_shell with full: true returns the whole output in one reply]\\n\"",
-    "to": "\"[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\\n\"",
+    "from": "this reply is cut; page the file with gm.read_file, offset and limit in lines, instead of cat, sed, head or tail through run_shell",
+    "to": "this reply is cut; the same call with full: true returns the whole output in one reply, instead of cat, sed, head or tail through run_shell",
     "count": 1
    }
   ]
