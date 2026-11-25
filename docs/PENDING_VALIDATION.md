@@ -6079,3 +6079,15 @@ Ranked open work:
   5. Owner decisions, held or not started: item 5 (the cap by unit, held for the owner); the run_code alias code for body (bevy 37 refusals); G8 and G9; item 7 (G5 shell-job lifetime).
   6. Not gm's: fx's job_status re-poll (355,578 calls, run 2026-11-22-03-00-36-c81c72, seqs 1954 to 1956 and 235775 to 235776 show the same waitMs with a 0.5 ms return). Reported to the dispatcher, not dispatched; fx is not changed.
 - Phase A for item 3 (run_shell dump class): check-run-shell-dump-hint, red-run-shell-dump-hint, the hint in native/components/verbs/verbs.cpp. Not compiled or run; no window until the swap condition holds at launch.
+
+### 70. run_shell other class (item 4 of the ranked list): classified; the dump part addressed (Phase A, not run)
+
+- Classification of the 33 cut run_shell replies on 11-22 that are not grep or dump by the dump pattern (cd-prefixed commands 27; others 6), from the command text of each journal event:
+  - dumps joined by ; or && after a cd, or after another command (about 20 of 27 cd commands and the mkdir chain): sed -n, cat, head or tail after ; or &&. The dump pattern accepted only "cd X &&" in front, so these were not classed as dumps and got no hint.
+  - script runs piped to head, or run from cd (node, python3): not dumps; no hint in this item.
+  - misc (wc, ls, nl, awk): no hint in this item.
+- Change: native/components/verbs/verbs.cpp dump pattern becomes a cat, sed -n, head or tail that follows ; or &&, not a pipe. Its hint is unchanged (page with gm.read_file, offset and limit in lines).
+- Check: check-run-shell-dump-cd-hint (native/components/tool/checks/run_shell_dump_cd_hint.cpp, registered in checks.def) runs cd . ; cat on a 300-line file and passes when the reply is cut in band and its hint names gm.read_file with offset.
+- Red: red-run-shell-dump-cd-hint restores the old pattern; the check must then fail.
+- Done condition (item 4): the dump-with-separator part of the other class (about 20 of 33 on 11-22) gets its hint; the script-run and misc parts stay unhinted and are not counted as addressed. Witness: the check, the red, and the day-after count of run_shell cut replies with a non-grep, non-dump command, due 2026-11-26 or later, after peers work on the installed build from this commit.
+- Not compiled or run in Phase A.

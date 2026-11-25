@@ -603,5 +603,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-run-shell-dump-cd-hint",
+  "witness": "check-run-shell-dump-cd-hint",
+  "file": "native/components/verbs/verbs.cpp",
+  "edits": [
+   {
+    "from": "static const std::regex kDumpCutCommand(R\"((^|;|&&)\\s*(cat|sed -n|head|tail)\\s)\");",
+    "to": "static const std::regex kDumpCutCommand(R\"(^\\s*(cd [^;&|]*&&\\s*)?(cat|sed -n|head|tail)\\s)\");",
+    "count": 1
+   }
+  ]
  }
 ]
