@@ -62,9 +62,13 @@ CheckResult check_browser_feedback(const std::string& binary) {
             const std::string first = execute(session, "state.p = await context.newPage(); await state.p.goto('data:text/html,<title>feedback-one</title>'); return 'first';");
             expect(first.find("feedback-one") != std::string::npos && first.find("browsers:") != std::string::npos, "the first call did not list the open pages: " + first.substr(0, 400));
             execute(session, "return 'warm';");
-            const std::string same = execute(session, "await state.p.waitForTimeout(2500); return 'same';");
-            expect(same.find("browsers:") == std::string::npos && same.find("feedback-one") == std::string::npos && same.find("gate pid") != std::string::npos,
-                   "a call after which no page changed repeated the page list or lost the gate line: " + same.substr(0, 400));
+            std::string same;
+            bool quiet = false;
+            for (int attempt = 0; attempt < 3 && !quiet; ++attempt) {
+                same = execute(session, "await state.p.waitForTimeout(2500); return 'same';");
+                quiet = same.find("browsers:") == std::string::npos && same.find("feedback-one") == std::string::npos && same.find("gate pid") != std::string::npos;
+            }
+            expect(quiet, "three calls in a row after which no page of this project changed each repeated the page list or lost the gate line (the list is machine-wide, so one call can repeat when another browser changes; three in a row cannot): " + same.substr(same.find("[return value]") == std::string::npos ? 0 : same.find("[return value]"), 1800));
             const std::string changed = execute(session, "await state.p.evaluate(() => { document.title = 'feedback-two'; }); await state.p.waitForTimeout(2500); return 'changed';");
             expect(changed.find("feedback-two") != std::string::npos, "a call that changed a page title did not list the pages again: " + changed.substr(0, 900));
             const std::string slept = execute(session, "await state.p.waitForTimeout(5200); return 'slept';");
