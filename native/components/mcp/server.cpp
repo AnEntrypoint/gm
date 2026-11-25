@@ -113,7 +113,7 @@ OutputArtifact store_artifact(const std::string& text, const fs::path& run_dir, 
     out << clean;
     const std::string path = file.generic_string();
     const std::string path_json = json::dump(json::Value(path));
-    return {path, digest, clean.size(), "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 }) and read on from next until next is null]"};
+    return {path, digest, clean.size(), "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0 }) and read on from next until next is null]"};
 }
 
 std::string utf8_head(const std::string& text, std::size_t bytes) {
@@ -146,7 +146,7 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
     reply.set("next", static_cast<double>(shown));
     reply.set("notice", "[gm: output is " + std::to_string(total) + " characters; the first " + std::to_string(shown) +
                             " are in output. Read on with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: " +
-                            std::to_string(shown) + ", limit: 20000 }) until next is null]");
+                            std::to_string(shown) + " }) until next is null]");
 }
 constexpr std::size_t kTailCap = 2000;
 constexpr std::size_t kTaskPage = 4000;
@@ -3669,7 +3669,6 @@ struct Server::State {
 
 namespace {
 
-constexpr std::size_t kInlineVerbChars = 12000;
 constexpr std::size_t kInlineHeadChars = 4500;
 constexpr std::size_t kInlineTailChars = 1500;
 constexpr std::size_t kSearchHeadChars = 2000;
@@ -3724,7 +3723,7 @@ ShownPart shown_part(const std::string& text, const std::string& command, const 
         if (!failures.empty()) {
             const std::size_t tail_from = lines.size() > kTestTailLines ? lines.size() - kTestTailLines : 0;
             std::string body = join_lines(failures, 0, failures.size()) + "\n" + std::string(gm::marker::kCutHere) + "\n" + join_lines(lines, tail_from, lines.size());
-            if (gm::utf16_length(body) > kInlineVerbChars) body = js_prefix(body, kInlineVerbChars);
+            if (gm::utf16_length(body) > gm::marker::kInlineChars) body = js_prefix(body, gm::marker::kInlineChars);
             return {body, gm::utf16_length(body)};
         }
     }
@@ -3744,7 +3743,7 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const std::size_t lead_end = text.find('\n');
     const std::string rest = lead ? (lead_end == std::string::npos ? std::string() : text.substr(lead_end + 1)) : text;
     const std::size_t total = gm::utf16_length(rest);
-    if (total <= kInlineVerbChars) return result;
+    if (total <= gm::marker::kInlineChars) return result;
     std::string path;
     const Value* existing = result.find("outputPath");
     if (existing != nullptr && existing->is_string()) path = existing->as_string();
@@ -3767,12 +3766,8 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     result.set("outputPath", path);
     result.set("totalChars", static_cast<double>(total));
     result.set("omittedChars", static_cast<double>(omitted));
-    const Value* range_limit = args.find("limit");
-    const Value* unit_arg = args.find("unit");
-    const bool lines_page = name == "read_file" && (args.find("offset") != nullptr || args.find("limit") != nullptr) && !(unit_arg != nullptr && unit_arg->is_string() && unit_arg->as_string() == "chars");
-    const bool over_cap = (name == "read_file" && range_limit != nullptr && range_limit->is_number() && range_limit->as_number() > static_cast<double>(kInlineVerbChars)) || lines_page;
     const bool whole_read = name == "read_file" && args.find("offset") == nullptr && args.find("limit") == nullptr;
-    result.set("hint", lines_page ? std::string("this reply is cut at 12000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 12000 or less from the offset in nextOffset") : over_cap ? std::string("this reply is cut at 12000 characters in band, so a range with limit above 12000 is cut: page with read_file limit 12000 or less from the offset in nextOffset") : whole_read ? std::string("this reply is cut at 12000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 12000 characters") : name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
+    result.set("hint", whole_read ? std::string("this reply is cut at 12000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 12000 characters") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
     result.set("lines", static_cast<double>(split_lines(text).size()));
     result.set("next", static_cast<double>(part.next));
     return result;

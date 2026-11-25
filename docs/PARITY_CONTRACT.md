@@ -181,7 +181,7 @@ With no `--skills` argument, the served skill is `skills/gm/SKILL.md` in the dir
 
 ## 8. bounded verb output and repeat pointers
 
-Inside run_code a read_file or run_shell result over 6000 characters is cut to its first 4500 and last 1500 characters, the whole text is kept at outputPath, and full: true returns it inline. An identical read_file call with no write verb between is answered with a pointer to its step; fresh: true reads again (server.cpp body_call, bounded_output; W23 in tools/parity-contract.mjs).
+Inside run_code a read_file or run_shell result over 12000 characters is cut to its first 4500 and last 1500 characters, the whole text is kept at outputPath, and full: true returns it inline. An identical read_file call with no write verb between is answered with a pointer to its step; fresh: true reads again (server.cpp body_call, bounded_output; W23 in tools/parity-contract.mjs).
 
     gm-tool check <bin> parity-contract
     W23 pass bounded first read 6174 chars truncated=true omitted=12000; identical repeat is a pointer=true; fresh read 6174 chars; full read 18000 chars

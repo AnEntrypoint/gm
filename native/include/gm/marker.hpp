@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -10,6 +11,7 @@ namespace gm::marker {
 inline constexpr std::string_view kCutMarker = "<<<gm-cut";
 inline constexpr std::string_view kPointerMarker = "<<<gm-pointer";
 inline constexpr std::string_view kCutHere = "<<<gm-cut-here>>>";
+inline constexpr std::size_t kInlineChars = 12000;
 
 inline std::string cut_line(std::size_t omitted, const std::string& path) {
     return std::string(kCutMarker) + " omitted=" + std::to_string(omitted) + " outputPath=" + path + " full=true>>>";

@@ -545,25 +545,25 @@
   ]
  },
  {
-  "id": "red-read-range-cap-hint",
-  "witness": "check-read-range-cap-hint",
-  "file": "native/components/mcp/server.cpp",
+  "id": "red-read-range-clamp",
+  "witness": "check-read-range-clamp",
+  "file": "native/components/verbs/verbs.cpp",
   "edits": [
    {
-    "from": "over_cap ? std::string(\"this reply is cut at 12000 characters in band, so a range with limit above 12000 is cut: page with read_file limit 12000 or less from the offset in nextOffset\") : ",
-    "to": "",
+    "from": "std::min(static_cast<std::size_t>(limit_value->as_number()), read_page) : read_page;",
+    "to": "static_cast<std::size_t>(limit_value->as_number()) : read_page;",
     "count": 1
    }
   ]
  },
  {
-  "id": "red-read-lines-cap-hint",
-  "witness": "check-read-lines-cap-hint",
-  "file": "native/components/mcp/server.cpp",
+  "id": "red-read-lines-pack",
+  "witness": "check-read-lines-pack",
+  "file": "native/components/verbs/verbs.cpp",
   "edits": [
    {
-    "from": "result.set(\"hint\", lines_page ? std::string(\"this reply is cut at 12000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 12000 or less from the offset in nextOffset\") : over_cap ? std::string(",
-    "to": "result.set(\"hint\", over_cap ? std::string(",
+    "from": "if (grown > read_page) break;",
+    "to": "if (grown > output_page) break;",
     "count": 1
    }
   ]
@@ -583,11 +583,11 @@
  {
   "id": "red-inline-cap-raised",
   "witness": "check-inline-cap-raised",
-  "file": "native/components/mcp/server.cpp",
+  "file": "native/include/gm/marker.hpp",
   "edits": [
    {
-    "from": "constexpr std::size_t kInlineVerbChars = 12000;",
-    "to": "constexpr std::size_t kInlineVerbChars = 6000;",
+    "from": "inline constexpr std::size_t kInlineChars = 12000;",
+    "to": "inline constexpr std::size_t kInlineChars = 6000;",
     "count": 1
    }
   ]

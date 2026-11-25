@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "gm/json.hpp"
+#include "gm/marker.hpp"
 #include "gm/log.hpp"
 #include "gm/verbs.hpp"
 
@@ -81,6 +82,7 @@ json::Value git_call(std::string_view name, const json::Value& args, const std::
 json::Value fetch_call(const json::Value& args, const std::filesystem::path& workspace, LockedLog& log, const std::filesystem::path& run_dir);
 
 inline constexpr std::size_t output_page = 20000;
+inline constexpr std::size_t read_page = gm::marker::kInlineChars;
 inline constexpr std::size_t tail_cap = 2000;
 
 std::string to_valid_utf8(std::string_view bytes);

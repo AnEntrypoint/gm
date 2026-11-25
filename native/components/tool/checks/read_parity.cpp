@@ -32,7 +32,7 @@ std::string fixture_bytes() {
 }
 
 std::string hint_chars(int offset) {
-    return "pass unit: \"chars\", offset: " + std::to_string(offset) + " and limit: 20000 to read the rest";
+    return "pass unit: \"chars\", offset: " + std::to_string(offset) + " to read the rest";
 }
 
 std::string hint_lines(int offset, int limit) {
@@ -72,7 +72,7 @@ std::vector<Probe> probes() {
     const std::string whole_head = kAccented + kEmoji + kReplacement;
     const std::string whole_tail = xs(12) + kEmoji + "y\ntail ok\n";
     const std::string first_line_tail = kAccented.substr(1) + kEmoji + kReplacement + "\n";
-    const std::string long_hint = "line 1 is longer than a page: pass unit: \"chars\", offset: 20025 and limit: 20000 to read the rest";
+    const std::string long_hint = "line 1 is longer than a page: pass unit: \"chars\", offset: 12025 to read the rest";
     const std::string inside = kEmoji + kReplacement + "\nxx";
     return {
         {"whole lines", "", expectation("lines", 3, 0, nullptr, false, nullptr, nullptr, nullptr, kTotalChars, whole_head, whole_tail)},
@@ -81,11 +81,11 @@ std::vector<Probe> probes() {
          expectation(nullptr, kTotalChars, 0, 22, true, nullptr, hint_chars(22), notice(29, hint_chars(22)), 21, kAccented, kAccented)},
         {"chars from inside an emoji", ", unit: 'chars', offset: " + std::to_string(kEmojiAt + 1) + ", limit: 5",
          expectation(nullptr, kTotalChars, 22, 27, true, nullptr, hint_chars(27), notice(10, hint_chars(27)), 6, inside, inside)},
-        {"chars page of 20000", ", unit: 'chars', offset: 0, limit: 20000",
-         expectation(nullptr, kTotalChars, 0, 20000, true, nullptr, hint_chars(20000), notice(20012, hint_chars(20000)), 20000, whole_head, xs(24))},
+        {"chars page over the cap is clamped", ", unit: 'chars', offset: 0, limit: 20000",
+         expectation(nullptr, kTotalChars, 0, 12000, true, nullptr, hint_chars(12000), notice(12012, hint_chars(12000)), 12000, whole_head, xs(24))},
         {"lines first page", ", offset: 0",
          expectation("lines", 3, 0, 1, true, nullptr, hint_lines(1, 2), notice(37, hint_lines(1, 2)), 25, whole_head, first_line_tail)},
-        {"lines long line cut", ", offset: 1", expectation("lines", 3, 1, 2, true, true, long_hint, notice(19999, long_hint), 19999, xs(24), xs(24))},
+        {"lines long line cut", ", offset: 1", expectation("lines", 3, 1, 2, true, true, long_hint, notice(12000, long_hint), 12000, xs(24), xs(24))},
         {"lines past the end", ", offset: 9", expectation("lines", 3, 9, nullptr, false, nullptr, nullptr, nullptr, 0, "", "")},
     };
 }

@@ -33,6 +33,7 @@ namespace {
 
 using core::failure;
 using core::output_page;
+using core::read_page;
 using core::present;
 using core::refusal;
 using core::utf16_slice;
@@ -55,7 +56,7 @@ json::Value store_artifact(const std::string& text, const std::filesystem::path&
     reply.set("offset", static_cast<double>(0));
     reply.set("next", static_cast<double>(0));
     reply.set("truncated", true);
-    reply.set("notice", "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 })]");
+    reply.set("notice", "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0 })]");
     return reply;
 }
 
@@ -76,7 +77,7 @@ json::Value cut_shell_output(json::Value reply, const std::string& text, const s
     reply.set("next", static_cast<double>(shown));
     reply.set("notice", "[gm: output is " + std::to_string(total) + " characters; the first " + std::to_string(shown) +
                             " are in output. Read on with gm.read_file({ path: " + json::dump(json::Value(path)) +
-                            ", unit: \"chars\", offset: " + std::to_string(shown) + ", limit: " + std::to_string(output_page) +
+                            ", unit: \"chars\", offset: " + std::to_string(shown) +
                             " }) until next is null]");
     return reply;
 }
@@ -145,14 +146,14 @@ json::Value field_page(const json::Value& args, auto& log) {
 const std::vector<VerbInfo>& verb_table() {
     static const std::vector<VerbInfo> table = {
     {"task_set", "Replace or clear this run task after its first next_context. task is a string or null; empty string and null clear it. owner:true is required; child contexts and calls before the first next_context are refused.", R"json({"type":"object","properties":{"task":{"type":["string","null"]},"owner":{"type":"boolean"}},"required":["task","owner"]})json"},
-    {"read_file", "Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes (inside run_code the reply is bounded as described below), and fails with the file size when it is larger. With offset or limit it returns one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000; with neither set, the whole file), total and next in characters instead. Inside run_code a result over 6000 characters is cut to its first 4500 and last 1500 characters, with outputPath holding the whole text; full: true returns it all, and fresh: true reads again when an identical earlier call would be answered with a pointer. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"},"full":{"type":"boolean"},"fresh":{"type":"boolean"}},"required":["path"]})json"},
+    {"read_file", "Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes (inside run_code the reply is bounded as described below), and fails with the file size when it is larger. With offset or limit it returns one page of at most 12000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 12000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 or more, and a page holds at most 12000, so a larger limit gives 12000; with neither set, the whole file), total and next in characters instead. Inside run_code a result over 12000 characters is cut to its first 4500 and last 1500 characters, with outputPath holding the whole text; full: true returns it all, and fresh: true reads again when an identical earlier call would be answered with a pointer. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"},"full":{"type":"boolean"},"fresh":{"type":"boolean"}},"required":["path"]})json"},
     {"write_file", "Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true. old_string and new_string are accepted as aliases for old and new.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"old_string":{"type":"string","description":"Alias for old."},"new_string":{"type":"string","description":"Alias for new."},"replaceAll":{"type":"boolean"}},"required":["path"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"prefix":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
     {"find", "Find entries under a directory, inside or outside the workspace, by name. glob matches the entry name, or the path relative to the directory when it contains a slash; * matches any run of characters except a slash. kind is file, dir or any (default any). Directories end with a slash. The walk skips .git, .gm, .agentplug, .agentplug-kv, .playwriter, runs and node_modules, and does not follow symlinks. offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"glob":{"type":"string"},"kind":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
     {"fs_op", "Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.", R"json({"type":"object","properties":{"op":{"type":"string","enum":["mkdir","cp","mv","rm"]},"path":{"type":"string"},"to":{"type":"string"}},"required":["op","path"]})json"},
-    {"run_shell", "Run a shell command in the workspace and wait for it. No timeout unless timeoutMs is given. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. Inside run_code a result over 6000 characters is cut to its first 4500 and last 1500, with outputPath holding the whole text; full: true returns it all. A reply that is still over 20000 characters adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"},"full":{"type":"boolean"}},"required":["command"]})json"},
+    {"run_shell", "Run a shell command in the workspace and wait for it. No timeout unless timeoutMs is given. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. Inside run_code a result over 12000 characters is cut to its first 4500 and last 1500, with outputPath holding the whole text; full: true returns it all. A reply that is still over 20000 characters adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"},"full":{"type":"boolean"}},"required":["command"]})json"},
     {"job_start", "Start a shell command as a named background job and return at once. job is a name of letters, digits, _ and - (at most 64 characters). Wait for it with one job_status({ job, waitMs, tail }) call. timeoutMs is the job's deadline in milliseconds; without it the job has no deadline. A deadline past the job lifetime, when one is set, ends the job at the lifetime with reason lifetime. At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs. progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck. extendOnProgress: true keeps a job running while it writes output or touches its progress file: timeoutMs is then the longest silence allowed, the job lifetime does not apply, and a job silent for that long ends killed with reason idle.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"},"progress":{"type":"string"},"extendOnProgress":{"type":"boolean"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs blocks until the job leaves running or that many milliseconds pass, with no ceiling, so one call waits for a job and no sleep or poll loop is needed; a reply whose state is running carries a hint to call job_status again. tail, a number, returns only the last tail lines, which keeps a wait reply short. pid, in place of job, waits for a process gm did not start to disappear; it has no exit code. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"pid":{"type":"number"},"waitMs":{"type":"number"},"tail":{"type":"number"},"offset":{"type":"number"}},"required":[]})json"},
     {"job_stop", "Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.", R"json({"type":"object","properties":{"job":{"type":"string"}},"required":["job"]})json"},
@@ -377,8 +378,8 @@ struct CoreVerbs::Impl {
         if (offset_value != nullptr && (!core::is_whole_number(offset_value) || offset_value->as_number() < 0)) {
             return "offset must be a whole number of characters, zero or more";
         }
-        if (limit_value != nullptr && (!core::is_whole_number(limit_value) || limit_value->as_number() < 1 || limit_value->as_number() > static_cast<double>(output_page))) {
-            return "limit must be a whole number from 1 to 20000";
+        if (limit_value != nullptr && (!core::is_whole_number(limit_value) || limit_value->as_number() < 1)) {
+            return "limit must be a whole number of characters, one or more";
         }
         return std::nullopt;
     }
@@ -399,7 +400,7 @@ struct CoreVerbs::Impl {
         const json::Value* offset_value = present(args, "offset");
         const json::Value* limit_value = present(args, "limit");
         std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
-        std::size_t limit = limit_value != nullptr ? static_cast<std::size_t>(limit_value->as_number()) : output_page;
+        std::size_t limit = limit_value != nullptr ? std::min(static_cast<std::size_t>(limit_value->as_number()), read_page) : read_page;
         std::size_t length = utf16_length(text);
         std::size_t end = std::min(offset + limit, length);
         bool more = end < length;
@@ -409,7 +410,7 @@ struct CoreVerbs::Impl {
         reply.set("total", static_cast<std::uint64_t>(length));
         reply.set("offset", static_cast<std::uint64_t>(offset));
         reply.set("next", number_or_null(more, end));
-        std::string hint = "pass unit: \"chars\", offset: " + std::to_string(end) + " and limit: 20000 to read the rest";
+        std::string hint = "pass unit: \"chars\", offset: " + std::to_string(end) + " to read the rest";
         set_cut_notice(reply, total_bytes, more ? &hint : nullptr);
         return reply;
     }
@@ -478,9 +479,9 @@ struct CoreVerbs::Impl {
         auto units_between = [&](std::size_t a, std::size_t b) { return utf16_length(std::string_view(text).substr(a, b - a)); };
         std::size_t begin = starts[offset];
         std::size_t used = units_between(begin, line_end(offset));
-        if (used > output_page) {
+        if (used > read_page) {
             std::string_view rest_of_text = std::string_view(text).substr(begin);
-            std::size_t cut = core::byte_at_utf16(rest_of_text, output_page);
+            std::size_t cut = core::byte_at_utf16(rest_of_text, read_page);
             std::size_t begin_units = utf16_length(std::string_view(text).substr(0, begin));
             reply.set("output", std::string(rest_of_text.substr(0, cut)));
             reply.set("cutLine", true);
@@ -488,14 +489,14 @@ struct CoreVerbs::Impl {
             reply.set("offset", static_cast<std::uint64_t>(offset));
             reply.set("next", number_or_null(offset + 1 < total, offset + 1));
             std::string hint = "line " + std::to_string(offset) + " is longer than a page: pass unit: \"chars\", offset: " +
-                               std::to_string(begin_units + output_page) + " and limit: 20000 to read the rest";
+                               std::to_string(begin_units + read_page) + " to read the rest";
             set_cut_notice(reply, total_bytes, &hint);
             return reply;
         }
         std::size_t last = offset + 1;
         while (last < total && last - offset < limit) {
             std::size_t grown = used + units_between(starts[last], line_end(last));
-            if (grown > output_page) break;
+            if (grown > read_page) break;
             used = grown;
             ++last;
         }

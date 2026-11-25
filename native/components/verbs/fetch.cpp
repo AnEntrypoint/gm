@@ -280,7 +280,7 @@ json::Value store_artifact(const fs::path& run_dir, const std::string& value) {
     const std::string digest = sha256_hex(bounded).substr(0, 12);
     const fs::path path = run_dir / "outputs" / (digest + "-fetch.txt");
     write_text(path, bounded);
-    const std::string notice = "[gm: full output at " + path.string() + "; page with gm.read_file({ path: " + json::dump(json::Value(path.string())) + ", unit: \"chars\", offset: 0, limit: 20000 })]";
+    const std::string notice = "[gm: full output at " + path.string() + "; page with gm.read_file({ path: " + json::dump(json::Value(path.string())) + ", unit: \"chars\", offset: 0 })]";
     json::Value out;
     out.set("outputPath", path.string());
     out.set("totalChars", static_cast<std::uint64_t>(utf16_length(clean)));
