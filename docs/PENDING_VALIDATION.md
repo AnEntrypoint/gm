@@ -6184,3 +6184,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Done condition (measured later): no read_file reply is cut in band by construction; the count of read_file cut replies on the installed build stays 0, and the reply size of read_file falls for lines reads that used to be cut at 12000 and then reread. Witness: tools/journal-count.py on 2026-11-26 or later, after peers work a day on the installed build from this commit.
 - Not compiled or run in Phase A; the Phase B window compiles and runs check-read-range-clamp, check-read-lines-pack, check-read-parity, check-read-whole-cap-hint, check-inline-cap-raised and the four reds above.
 - Held items checked in the same pass, no change needed: G5 (shell-job lifetime) is closed by code: JobTable::bounded_by takes the smaller of timeoutMs and the job lifetime, and check-job-bounds passes with a 7200000 ms job ending at its 5000 ms lifetime. G8 (inspector.Session) and G9 (module.stripTypeScriptTypes) are rows in freddie's PENDING_VALIDATION.md, not gm's; both stay with the owner. The run_code code alias is not in this pass.
+
+### 74. Stale fixtures for check-cut-marker and check-retry-hints: 10000 characters is under the 12000 cap (Phase A, not run)
+
+- Found by the Phase B window of 850bbb3 (run phase-rc25, witnesses part: FAILED=1, two rows). Both checks wrote a 10000-character file and expected a cut in band; that was above the 6000 cap they were written for, and below the 12000 cap raised by 068845f. Their windows ran only their own checks, so the failure was not seen when 068845f and the dump hint (b108ff5 to dccfdf1) were pushed.
+- Change: native/components/tool/checks/cut_marker.cpp was superseded during the rebase onto origin: 2e89058 carries the same fixture fix (the cut-marker source file is 1000 lines, and retry_hints), so this commit keeps origin's two files.
+- Witness: check-cut-marker and check-retry-hints ok in the Phase B window on the commit that carries this item, with the full witness set and the red set in the same window.
+- Not run in Phase A.
