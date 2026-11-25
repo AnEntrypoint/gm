@@ -3669,7 +3669,7 @@ struct Server::State {
 
 namespace {
 
-constexpr std::size_t kInlineVerbChars = 6000;
+constexpr std::size_t kInlineVerbChars = 12000;
 constexpr std::size_t kInlineHeadChars = 4500;
 constexpr std::size_t kInlineTailChars = 1500;
 constexpr std::size_t kSearchHeadChars = 2000;
@@ -3772,7 +3772,7 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const bool lines_page = name == "read_file" && (args.find("offset") != nullptr || args.find("limit") != nullptr) && !(unit_arg != nullptr && unit_arg->is_string() && unit_arg->as_string() == "chars");
     const bool over_cap = (name == "read_file" && range_limit != nullptr && range_limit->is_number() && range_limit->as_number() > static_cast<double>(kInlineVerbChars)) || lines_page;
     const bool whole_read = name == "read_file" && args.find("offset") == nullptr && args.find("limit") == nullptr;
-    result.set("hint", lines_page ? std::string("this reply is cut at 6000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 6000 or less from the offset in nextOffset") : over_cap ? std::string("this reply is cut at 6000 characters in band, so a range with limit above 6000 is cut: page with read_file limit 6000 or less from the offset in nextOffset") : whole_read ? std::string("this reply is cut at 6000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 6000 characters") : name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
+    result.set("hint", lines_page ? std::string("this reply is cut at 12000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 12000 or less from the offset in nextOffset") : over_cap ? std::string("this reply is cut at 12000 characters in band, so a range with limit above 12000 is cut: page with read_file limit 12000 or less from the offset in nextOffset") : whole_read ? std::string("this reply is cut at 12000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 12000 characters") : name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
     result.set("lines", static_cast<double>(split_lines(text).size()));
     result.set("next", static_cast<double>(part.next));
     return result;

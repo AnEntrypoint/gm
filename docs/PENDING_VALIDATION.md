@@ -6056,3 +6056,13 @@ Ranked open work:
 
 - Item 4 (owner decision): raise the in-band cap above 6000 characters. Not started; the owner decides.
 - Item 5 (owner decision, held): the cap by unit. Held for the owner; not started.
+
+### 68. Item 4 (Phase A, not run): the in-band cap is raised from 6000 to 12000 characters
+
+- Ranked item 4 (owner-approved to start on 2026-11-25): raise the in-band cap for read_file. The constant kInlineVerbChars in native/components/mcp/server.cpp moves from 6000 to 12000; the head and tail of a cut stay 4500 and 1500.
+- Coupled edits: the item 1 to 3 hints say the new cap (12000); their checks assert "12000"; the item 2 check reads 60 lines of 300 characters, and the item 3 check reads a 14000-character file, so both still exceed the cap; the item 1 to 3 reds quote the new cap.
+- Scope: read_file only. run_shell output is condensed by its own threshold in native/components/verbs/ and is not changed by this item.
+- Trade-off, owner's decision: a reply can now carry up to 12000 characters in band, so a read that was cut at 6000 is now whole. The reply tokens per call rise for those reads; the cut count falls. Measure both with tools/journal-count.py after peers work a day on a build with this commit.
+- Check: check-inline-cap-raised (native/components/tool/checks/inline_cap_raised.cpp, registered in checks.def) reads a 9000-character file with no range and passes when the reply is not cut and returns at least 8500 characters.
+- Red: red-inline-cap-raised sets the constant back to 6000; the check must then fail.
+- Not compiled or run in Phase A.

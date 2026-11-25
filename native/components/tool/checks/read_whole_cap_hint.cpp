@@ -24,7 +24,7 @@ CheckResult check_read_whole_cap_hint(const std::string& binary) {
     fs::create_directories(workspace);
     {
         std::string text;
-        for (int line = 1; text.size() < 8000; ++line) text += "int value" + std::to_string(line) + " = " + std::to_string(line) + ";  // source line\n";
+        for (int line = 1; text.size() < 14000; ++line) text += "int value" + std::to_string(line) + " = " + std::to_string(line) + ";  // source line\n";
         std::ofstream(workspace / "main.txt", std::ios::binary) << text;
         Session session(binary, workspace, sandbox, 180000, true);
         if (!session.started()) {
@@ -35,12 +35,12 @@ CheckResult check_read_whole_cap_hint(const std::string& binary) {
             const json::Value* truncated = value_at(reply, "truncated");
             const std::string hint = text_at(reply, "hint");
             if (truncated == nullptr || !truncated->is_bool() || !truncated->as_bool())
-                result.failures.push_back("a whole read of an 8000-character file was not cut in band: " + json::dump(reply).substr(0, 200));
-            if (hint.find("offset") == std::string::npos || hint.find("6000") == std::string::npos)
+                result.failures.push_back("a whole read of a 14000-character file was not cut in band: " + json::dump(reply).substr(0, 200));
+            if (hint.find("offset") == std::string::npos || hint.find("12000") == std::string::npos)
                 result.failures.push_back("the cut hint of a whole read does not give the cap and offset paging: " + hint);
             if (hint.find("full: true") != std::string::npos)
                 result.failures.push_back("the cut hint of a whole read still suggests full: true: " + hint);
-            result.summary = "a whole read of a file over the 6000-character cap is cut in band, and its hint gives the cap and offset paging without full: true";
+            result.summary = "a whole read of a file over the 12000-character cap is cut in band, and its hint gives the cap and offset paging without full: true";
         }
         session.stop();
     }

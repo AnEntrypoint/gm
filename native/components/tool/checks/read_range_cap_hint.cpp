@@ -36,9 +36,9 @@ CheckResult check_read_range_cap_hint(const std::string& binary) {
             const std::string hint = text_at(reply, "hint");
             if (truncated == nullptr || !truncated->is_bool() || !truncated->as_bool())
                 result.failures.push_back("a ranged read of limit 20000 was not cut in band: " + json::dump(reply).substr(0, 200));
-            if (hint.find("6000") == std::string::npos || hint.find("nextOffset") == std::string::npos)
-                result.failures.push_back("the cut hint of a read with limit above the 6000-character cap does not name the cap and nextOffset: " + hint);
-            result.summary = "a ranged read_file with limit 20000 is cut at the 6000-character in-band cap and its hint names the cap and nextOffset for the next page";
+            if (hint.find("12000") == std::string::npos || hint.find("nextOffset") == std::string::npos)
+                result.failures.push_back("the cut hint of a read with limit above the 12000-character cap does not name the cap and nextOffset: " + hint);
+            result.summary = "a ranged read_file with limit 20000 is cut at the 12000-character in-band cap and its hint names the cap and nextOffset for the next page";
         }
         session.stop();
     }

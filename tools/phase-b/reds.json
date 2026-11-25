@@ -550,7 +550,7 @@
   "file": "native/components/mcp/server.cpp",
   "edits": [
    {
-    "from": "over_cap ? std::string(\"this reply is cut at 6000 characters in band, so a range with limit above 6000 is cut: page with read_file limit 6000 or less from the offset in nextOffset\") : ",
+    "from": "over_cap ? std::string(\"this reply is cut at 12000 characters in band, so a range with limit above 12000 is cut: page with read_file limit 12000 or less from the offset in nextOffset\") : ",
     "to": "",
     "count": 1
    }
@@ -562,7 +562,7 @@
   "file": "native/components/mcp/server.cpp",
   "edits": [
    {
-    "from": "result.set(\"hint\", lines_page ? std::string(\"this reply is cut at 6000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 6000 or less from the offset in nextOffset\") : over_cap ? std::string(",
+    "from": "result.set(\"hint\", lines_page ? std::string(\"this reply is cut at 12000 characters in band; a page of lines longer than the cap is cut: page with unit chars and limit 12000 or less from the offset in nextOffset\") : over_cap ? std::string(",
     "to": "result.set(\"hint\", over_cap ? std::string(",
     "count": 1
    }
@@ -574,8 +574,20 @@
   "file": "native/components/mcp/server.cpp",
   "edits": [
    {
-    "from": "whole_read ? std::string(\"this reply is cut at 6000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 6000 characters\") : ",
+    "from": "whole_read ? std::string(\"this reply is cut at 12000 characters in band: page the file with read_file offset and limit, lines by default or unit chars, each page at most 12000 characters\") : ",
     "to": "",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-inline-cap-raised",
+  "witness": "check-inline-cap-raised",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "constexpr std::size_t kInlineVerbChars = 12000;",
+    "to": "constexpr std::size_t kInlineVerbChars = 6000;",
     "count": 1
    }
   ]
