@@ -835,6 +835,8 @@ struct CoreVerbs::Impl {
                 if (std::regex_search(command->as_string(), kSearchCommand)) shaped.set("hint", "this reply is cut; gm.grep with pattern, root and limit returns the matching lines bounded, and outputPath holds the whole text");
                 static const std::regex kDumpCutCommand(R"((^|;|&&)\s*(cat|sed -n|head|tail)\s)");
                 if (std::regex_search(command->as_string(), kDumpCutCommand)) shaped.set("hint", "this reply is cut; page the file with gm.read_file, offset and limit in lines, instead of cat, sed, head or tail through run_shell");
+                static const std::regex kScriptCutCommand(R"((^|;|&&|\s)(node|python3?)\s)");
+                if (shaped.find("hint") == nullptr && std::regex_search(command->as_string(), kScriptCutCommand)) shaped.set("hint", "this reply is cut: the script printed more lines than the reply shows; outputPath holds all of it, so page it with gm.read_file, offset and limit in lines, or print fewer lines");
             }
             if (shaped.find("complete") == nullptr) shaped.set("complete", true);
             if (shaped.find("exitCode") == nullptr) shaped.set("exitCode", nullptr);

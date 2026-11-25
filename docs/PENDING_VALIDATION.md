@@ -6091,3 +6091,13 @@ Ranked open work:
 - Red: red-run-shell-dump-cd-hint restores the old pattern; the check must then fail.
 - Done condition (item 4): the dump-with-separator part of the other class (about 20 of 33 on 11-22) gets its hint; the script-run and misc parts stay unhinted and are not counted as addressed. Witness: the check, the red, and the day-after count of run_shell cut replies with a non-grep, non-dump command, due 2026-11-26 or later, after peers work on the installed build from this commit.
 - Not compiled or run in Phase A.
+
+### 71. run_shell other class, script runs: the hint names outputPath and fewer lines (Phase A, not run)
+
+- Ranked item 4, the script-run part (node or python3 runs, not dumps): about 6 of the 33 cut replies on 11-22 that were neither grep nor dump; the ones with a cd prefix are in the same family. The reply of a script that printed more than 200 lines is cut in the verb with outputPath, and it got no hint.
+- Change: native/components/verbs/verbs.cpp: a cut reply of a node or python3 run that has no hint yet gets "this reply is cut: the script printed more lines than the reply shows; outputPath holds all of it, so page it with gm.read_file, offset and limit in lines, or print fewer lines".
+- Check: check-run-shell-script-hint (native/components/tool/checks/run_shell_script_hint.cpp, registered in checks.def) runs python3 printing 300 lines and passes when the reply is cut in band and its hint names gm.read_file and fewer lines.
+- Red: red-run-shell-script-hint removes the script block; the check must then fail.
+- Remaining in item 4, not addressed here: the misc commands (wc, ls, nl, awk; a handful on 11-22). Their class witness is a separate check, not started.
+- Done condition (item 4, script part): script-run cut replies with no hint fall to 0 from about 6 on 11-22, measured with tools/journal-count.py on 2026-11-26 or later.
+- Not compiled or run in Phase A.

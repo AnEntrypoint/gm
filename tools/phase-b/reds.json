@@ -615,5 +615,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-run-shell-script-hint",
+  "witness": "check-run-shell-script-hint",
+  "file": "native/components/verbs/verbs.cpp",
+  "edits": [
+   {
+    "from": "                static const std::regex kScriptCutCommand(R\"((^|;|&&|\\s)(node|python3?)\\s)\");\n                if (shaped.find(\"hint\") == nullptr && std::regex_search(command->as_string(), kScriptCutCommand)) shaped.set(\"hint\", \"this reply is cut: the script printed more lines than the reply shows; outputPath holds all of it, so page it with gm.read_file, offset and limit in lines, or print fewer lines\");\n",
+    "to": "",
+    "count": 1
+   }
+  ]
  }
 ]
