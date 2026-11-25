@@ -14,7 +14,7 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr const char* kBody = R"JS(
-  await gm.write_file({ path: 'src.txt', content: 'line of source text\n'.repeat(500) });
+  await gm.write_file({ path: 'src.txt', content: 'line of source text\n'.repeat(1000) });
   await gm.write_file({ path: 'small.txt', content: 'short\n' });
   const bounded = await gm.read_file({ path: 'src.txt' });
   const refusedCopy = await gm.write_file({ path: 'copy.txt', content: bounded.output });
@@ -31,7 +31,7 @@ constexpr const char* kBody = R"JS(
 
 std::string repeat_line() {
     std::string text;
-    for (int i = 0; i < 500; ++i) text += "line of source text\n";
+    for (int i = 0; i < 1000; ++i) text += "line of source text\n";
     return text;
 }
 

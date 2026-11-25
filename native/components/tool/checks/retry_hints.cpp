@@ -42,14 +42,14 @@ CheckResult check_retry_hints(const std::string& binary) {
         if (!contains(text_at(interpolated, "error"), "MISSING_SHELL_NAME is not defined") || !contains(text_at(interpolated, "error"), kHint)) result.failures.push_back("a shell name interpolated by mistake does not name the data argument: " + text_at(interpolated, "error").substr(0, 300));
         const json::Value plain = tool_json(session, "run_code", json::Object{{"body", "return (;"}});
         if (!contains(text_at(plain, "error"), "the body does not load") || contains(text_at(plain, "error"), kHint)) result.failures.push_back("a plain syntax error should not carry the data hint: " + text_at(plain, "error").substr(0, 300));
-        const json::Value dumped = tool_json(session, "run_code", json::Object{{"body", "await gm.write_file({ path: 'big.txt', content: ('x'.repeat(99) + '\\n').repeat(100) }); const cut = await gm.run_shell({ command: 'cat big.txt' }); return { hint: cut.hint, head: String(cut.output).slice(0, 400) };"}});
+        const json::Value dumped = tool_json(session, "run_code", json::Object{{"body", "await gm.write_file({ path: 'big.txt', content: ('x'.repeat(99) + '\\n').repeat(300) }); const cut = await gm.run_shell({ command: 'cat big.txt' }); return { hint: cut.hint, head: String(cut.output).slice(0, 400) };"}});
         const std::string dump = json::dump(dumped);
-        if (!contains(dump, "with full: true returns the whole output in one reply") || contains(dump, "offset and limit gives the same lines")) result.failures.push_back("a cut dump does not point at full: true: " + dump.substr(0, 400));
+        if (!contains(dump, "gm.read_file, offset and limit in lines") || contains(dump, "offset and limit gives the same lines")) result.failures.push_back("a cut dump does not point at gm.read_file paging: " + dump.substr(0, 400));
         session.stop();
     }
     std::error_code ec;
     fs::remove_all(sandbox, ec);
-    if (result.failures.empty()) result.summary = "run_code's data argument reaches the body verbatim (a shell line with a dollar brace and backticks), and a body that fails to load on inline template text, or names an undefined shell variable through a dollar brace, is told to use data; a plain syntax error is not; a cut cat of a file points at full: true for the whole output in one reply instead of ranged rereads";
+    if (result.failures.empty()) result.summary = "run_code's data argument reaches the body verbatim (a shell line with a dollar brace and backticks), and a body that fails to load on inline template text, or names an undefined shell variable through a dollar brace, is told to use data; a plain syntax error is not; a cut cat of a file points at gm.read_file with offset and limit in lines, not at ranged rereads through the shell";
     return result;
 }
 
