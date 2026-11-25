@@ -833,6 +833,8 @@ struct CoreVerbs::Impl {
             if (const json::Value* cut = shaped.find("truncated"); cut->is_bool() && cut->as_bool()) {
                 static const std::regex kSearchCommand(R"((^|[\s|&;(])(grep|rg)\s)");
                 if (std::regex_search(command->as_string(), kSearchCommand)) shaped.set("hint", "this reply is cut; gm.grep with pattern, root and limit returns the matching lines bounded, and outputPath holds the whole text");
+                static const std::regex kDumpCutCommand(R"(^\s*(cd [^;&|]*&&\s*)?(cat|sed -n|head|tail)\s)");
+                if (std::regex_search(command->as_string(), kDumpCutCommand)) shaped.set("hint", "this reply is cut; page the file with gm.read_file, offset and limit in lines, instead of cat, sed, head or tail through run_shell");
             }
             if (shaped.find("complete") == nullptr) shaped.set("complete", true);
             if (shaped.find("exitCode") == nullptr) shaped.set("exitCode", nullptr);

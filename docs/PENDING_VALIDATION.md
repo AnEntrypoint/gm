@@ -6066,3 +6066,16 @@ Ranked open work:
 - Check: check-inline-cap-raised (native/components/tool/checks/inline_cap_raised.cpp, registered in checks.def) reads a 9000-character file with no range and passes when the reply is not cut and returns at least 8500 characters.
 - Red: red-inline-cap-raised sets the constant back to 6000; the check must then fail.
 - Not compiled or run in Phase A.
+
+### 69. Cut-class list closed; the ranked remaining work (2026-11-25)
+
+- Closed in this list: read_file cut class (items 1 to 4: ranged cap hint 451698c, line pages ced0909, whole reads 3ae5a7d, in-band cap 12000 at 068845f); run_shell grep cut class (b92afd4, the hint in verbs.cpp).
+- run_code cut replies are not a separate class: a body that returns a 9000-character value comes back in band, truncated false (probe on the installed build, 2026-11-25). The run_code cut replies on 11-22 (bevy 60, fx 60, oscraft 7, thebird 6) are nested read_file or run_shell cuts that the body returned; they are covered by the classes above.
+- Ranked remaining work:
+  1. Re-measure the run_shell grep cuts (b92afd4-1 installed 2026-11-25 01:24). Due 2026-11-26, after peers work a day on it. Done: run_shell grep cut replies per peer per day fall by half from 89 on 11-22. Witness: tools/journal-count.py on 2026-11-26 or later.
+  2. Re-measure the read_file classes: ced0909-1 (2026-11-25 02:27) for rereads of cut outputs (23 on 11-22); 3ae5a7d-1 (02:49) for whole reads of source files (11); 068845f-1 (03:12) for the cap, with cut count down and reply size up. Due 2026-11-26. Witness: tools/journal-count.py and a reply-size count for read_file.
+  3. run_shell dump class (cat, sed -n, head, tail): 51 cut replies on 11-22. Started now as Phase A (run_shell_dump_hint, below). Done: dump cut replies fall by half from 51. Witness: check-run-shell-dump-hint ok, red-run-shell-dump-hint fails, and a day-after count.
+  4. run_shell other class: 33 cut replies on 11-22, the commands not in the grep or dump classes (mostly builds and tests). Done: classify by command and give each class a hint. Witness: a check per class and a day-after count. Not started.
+  5. Owner decisions, held or not started: item 5 (the cap by unit, held for the owner); the run_code alias code for body (bevy 37 refusals); G8 and G9; item 7 (G5 shell-job lifetime).
+  6. Not gm's: fx's job_status re-poll (355,578 calls, run 2026-11-22-03-00-36-c81c72, seqs 1954 to 1956 and 235775 to 235776 show the same waitMs with a 0.5 ms return). Reported to the dispatcher, not dispatched; fx is not changed.
+- Phase A for item 3 (run_shell dump class): check-run-shell-dump-hint, red-run-shell-dump-hint, the hint in native/components/verbs/verbs.cpp. Not compiled or run; no window until the swap condition holds at launch.
