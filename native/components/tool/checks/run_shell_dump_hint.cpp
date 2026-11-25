@@ -24,7 +24,7 @@ CheckResult check_run_shell_dump_hint(const std::string& binary) {
     fs::create_directories(workspace);
     {
         std::string text;
-        for (int line = 1; text.size() < 9000; ++line) text += "dump line " + std::to_string(line) + " " + std::string(40, 'd') + "\n";
+        for (int line = 1; line <= 300; ++line) text += "dump line " + std::to_string(line) + " " + std::string(20, 'd') + "\n";
         std::ofstream(workspace / "dump.txt", std::ios::binary) << text;
         Session session(binary, workspace, sandbox, 180000, true);
         if (!session.started()) {
@@ -35,7 +35,7 @@ CheckResult check_run_shell_dump_hint(const std::string& binary) {
             const json::Value* truncated = value_at(reply, "truncated");
             const std::string hint = text_at(reply, "hint");
             if (truncated == nullptr || !truncated->is_bool() || !truncated->as_bool())
-                result.failures.push_back("a cat of a 9000-character file through run_shell was not cut in band: " + json::dump(reply).substr(0, 200));
+                result.failures.push_back("a cat of a 300-line file through run_shell was not cut in band: " + json::dump(reply).substr(0, 200));
             if (hint.find("gm.read_file") == std::string::npos || hint.find("offset") == std::string::npos)
                 result.failures.push_back("the cut hint of a run_shell dump does not name gm.read_file with offset: " + hint);
             result.summary = "a cat through run_shell that is cut in band names gm.read_file with offset and limit as the paged read";
