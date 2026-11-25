@@ -6191,3 +6191,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: native/components/tool/checks/cut_marker.cpp was superseded during the rebase onto origin: 2e89058 carries the same fixture fix (the cut-marker source file is 1000 lines, and retry_hints), so this commit keeps origin's two files.
 - Witness: check-cut-marker and check-retry-hints ok in the Phase B window on the commit that carries this item, with the full witness set and the red set in the same window.
 - Not run in Phase A.
+
+### 75. Stale red for the run_shell dump hint (Phase A, not run)
+
+- Found by the Phase B window of 7289505 (phase-rc27, reds2: FAILED red-run-shell-dump-hint). Its mutation text is the regex from before abc3f19 (cd-prefixed form), which no longer exists in native/components/verbs/verbs.cpp, so the mutation did not apply (matches 0 times) and the red could not run.
+- Change: tools/phase-b/reds.json red-run-shell-dump-hint now removes the current two lines (the kDumpCutCommand regex and its shaped.set hint) at verbs.cpp.
+- Witness: red-run-shell-dump-hint RED_RC=1 AFTER_RC=0 in a Phase B window on the commit that carries this item (the other 53 reds passed in phase-rc27).
+- Not run in Phase A.

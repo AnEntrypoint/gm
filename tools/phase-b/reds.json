@@ -598,7 +598,7 @@
   "file": "native/components/verbs/verbs.cpp",
   "edits": [
    {
-    "from": "                static const std::regex kDumpCutCommand(R\"(^\\s*(cd [^;&|]*&&\\s*)?(cat|sed -n|head|tail)\\s)\");\n                if (std::regex_search(command->as_string(), kDumpCutCommand)) shaped.set(\"hint\", \"this reply is cut; page the file with gm.read_file, offset and limit in lines, instead of cat, sed, head or tail through run_shell\");\n",
+    "from": "                static const std::regex kDumpCutCommand(R\"((^|;|&&)\\s*(cat|sed -n|head|tail)\\s)\");\n                if (std::regex_search(command->as_string(), kDumpCutCommand)) shaped.set(\"hint\", \"this reply is cut; page the file with gm.read_file, offset and limit in lines, instead of cat, sed, head or tail through run_shell\");\n",
     "to": "",
     "count": 1
    }
