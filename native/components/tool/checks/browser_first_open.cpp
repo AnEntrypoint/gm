@@ -228,9 +228,15 @@ CheckResult check_browser_first_open(const std::string& binary) {
                 failures.push_back("gm serve did not start for the gate-loss scenario");
             } else {
                 init_session(session);
-                session.body(exec_body(open_code(page_url)));
-                const std::string status_text = status_of(launcher, sandbox, workspace);
-                const long long gate_pid = first_number(status_text, "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
+                const std::string reopened = session.body(exec_body(open_code(page_url)));
+                if (reopened.find("WITNESS coi=true") == std::string::npos) failures.push_back("the second open did not show a crossOriginIsolated page: " + cause_of(reopened));
+                std::string status_text;
+                long long gate_pid = 0;
+                wait_until([&] {
+                    status_text = status_of(launcher, sandbox, workspace);
+                    gate_pid = first_number(status_text, "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
+                    return gate_pid > 0;
+                }, 20);
                 const Owned gate = own(gate_pid);
                 if (still_ours(gate)) {
                     ::kill(static_cast<pid_t>(gate.pid), SIGKILL);
@@ -248,6 +254,10 @@ CheckResult check_browser_first_open(const std::string& binary) {
                 }
                 session.body(exec_body(close_code(page_url)));
                 session.stop();
+                if (!failures.empty()) {
+                    failures.push_back("gate log tail: " + tail_of(read_text(workspace / ".playwriter" / "gate.log"), 1500));
+                    failures.push_back("browser log tail: " + tail_of(read_text(workspace / ".playwriter" / "browser.log"), 1000));
+                }
             }
         }
 
