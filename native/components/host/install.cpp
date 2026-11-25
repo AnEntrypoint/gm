@@ -142,6 +142,8 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher reads the browser's websocket address with the probe's client", "bin/playwriter-project", "gave no websocket address"},
     {"launcher hands an idle gate over to a newer launcher build", "bin/playwriter-project", "/__pwp/handoff"},
     {"launcher keeps the browser profile's caches under a limit", "bin/playwriter-project", "trimProfileCaches"},
+    {"launcher keeps a browser that does not answer while it is alive", "bin/playwriter-project", "listed === null"},
+    {"launcher restores the last session when PLAYWRITER_RESTORE_SESSION is 1", "bin/playwriter-project", "PLAYWRITER_RESTORE_SESSION"},
 };
 
 std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {

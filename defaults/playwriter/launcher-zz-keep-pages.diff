@@ -1,0 +1,17 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index 4e14787..d243cab 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -618,8 +618,10 @@ function runGate({ gate, debug }) {
+   };
+ 
+   const isHeld = async () => {
+-    if (!chromeUp || !(await probe())) return false;
+-    const open = ((await httpJson(debug, '/json/list', 3000)) ?? []).some(isCallerPage);
++    if (!chromeUp) return false;
++    const listed = (await probe()) ? await httpJson(debug, '/json/list', 3000) : null;
++    if (listed === null) return !browserDead();
++    const open = listed.some(isCallerPage);
+     if (open) holdUntil = 0;
+     return open || Date.now() < holdUntil;
+   };

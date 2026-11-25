@@ -3,6 +3,7 @@
 #if !defined(_WIN32)
 
 #include <chrono>
+#include <csignal>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -331,6 +332,94 @@ CheckResult check_browser_profile_cache(const std::string&) {
     if (result.failures.empty()) result.summary = "a browser start removes the profile's Cache and Code Cache when they exceed PLAYWRITER_CACHE_LIMIT_MB (3 MB against 1 MB) and leaves them under it (3 MB against 100 MB), and never touches a profile file outside the caches";
     return result;
 }
+
+namespace {
+
+std::string debug_port_of(const Context& context) {
+    std::string text = read_text(context.workspace / ".playwriter" / "debug-port");
+    while (!text.empty() && (text.back() == '\n' || text.back() == '\r' || text.back() == ' ')) text.pop_back();
+    return text;
+}
+
+const char* const kCdpScript =
+    "const http = require('http');"
+    "const port = process.argv[1]; const mode = process.argv[2];"
+    "const get = (path, method) => new Promise((resolve, reject) => { const r = http.request({ host: '127.0.0.1', port, path, method: method || 'GET' }, (q) => { let b = ''; q.on('data', (c) => { b += c; }); q.on('end', () => resolve(b)); }); r.on('error', reject); r.end(); });"
+    "(async () => {"
+    "  if (mode === 'page') { await get('/json/new?http://127.0.0.1:' + port + '/json/version', 'PUT'); process.exit(0); }"
+    "  const info = JSON.parse(await get('/json/version'));"
+    "  const ws = new WebSocket(info.webSocketDebuggerUrl); let id = 0; const pending = new Map();"
+    "  ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && pending.has(d.id)) { pending.get(d.id)(d); pending.delete(d.id); } };"
+    "  await new Promise((r) => { ws.onopen = r; });"
+    "  const call = (method, params) => new Promise((r) => { const n = ++id; pending.set(n, r); ws.send(JSON.stringify({ id: n, method, params })); });"
+    "  if (mode === 'set') {"
+    "    await call('Storage.setCookies', { cookies: [{ name: 'persistent', value: 'p', url: 'http://127.0.0.1/', expires: Math.floor(Date.now() / 1000) + 86400 }, { name: 'sess', value: 's', url: 'http://127.0.0.1/' }] });"
+    "    await get('/json/new?http://127.0.0.1:' + port + '/json/version', 'PUT');"
+    "    await new Promise((r) => setTimeout(r, 1500));"
+    "    ws.send(JSON.stringify({ id: ++id, method: 'Browser.close' }));"
+    "    await new Promise((r) => setTimeout(r, 1000));"
+    "  } else { const r = await call('Storage.getCookies', {}); console.log('cookies ' + (r.result?.cookies ?? []).map((c) => c.name).sort().join(',')); ws.close(); }"
+    "  process.exit(0);"
+    "})().catch((e) => { console.log('error ' + e.message); process.exit(1); });";
+
+std::string cdp(const Context& context, const std::string& mode) {
+    const auto reply = proc::run({"node", "-e", kCdpScript, debug_port_of(context), mode}, context.workspace, {}, 60000);
+    return reply.out + reply.err;
+}
+
+bool page_listed(const Context& context) {
+    const auto reply = proc::run({"node", "-e", "fetch('http://127.0.0.1:' + process.argv[1] + '/json/list').then((r) => r.text()).then((t) => console.log(t)).catch(() => console.log('unreachable'))", debug_port_of(context)}, context.workspace, {}, 20000);
+    return reply.out.find("/json/version") != std::string::npos;
+}
+
+}
+
+CheckResult check_browser_keeps_pages(const std::string&) {
+    CheckResult result = with_started_gate("keeps-pages", {}, [](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        cdp(context, "page");
+        std::this_thread::sleep_for(std::chrono::seconds(7));
+        const bool listed_before = page_listed(context);
+        ::kill(static_cast<pid_t>(gate.browser_pid), SIGSTOP);
+        std::this_thread::sleep_for(std::chrono::seconds(20));
+        ::kill(static_cast<pid_t>(gate.browser_pid), SIGCONT);
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+        const bool alive = proc::start_time_of(gate.browser_pid) == gate.browser_started;
+        const bool listed = alive && page_listed(context);
+        const std::string log = read_text(context.workspace / ".playwriter" / "gate.log");
+        if (!listed_before) inner.failures.push_back("the page the check opened was not listed by the browser");
+        if (!alive) inner.failures.push_back("the browser (pid " + std::to_string(gate.browser_pid) + ") with an open page was stopped while it did not answer for 20 s and no lease was held; gate log: " + support::tail_of(log, 700));
+        else if (!listed) inner.failures.push_back("the browser is up but its page is gone; gate log: " + support::tail_of(log, 500));
+    });
+    CheckResult idle = with_started_gate("idle-stops", {"PLAYWRITER_IDLE_MS=8000"}, [](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        cdp(context, "page");
+        bool gone = false;
+        for (int second = 0; second < 40 && !gone; ++second) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            gone = proc::start_time_of(gate.browser_pid) != gate.browser_started;
+        }
+        if (!gone) inner.failures.push_back("the idle timeout of 8 s did not stop a browser with an open page and no lease within 40 s");
+    });
+    for (const std::string& failure : idle.failures) result.failures.push_back(failure);
+    if (result.failures.empty()) result.summary = "a browser with an open page and no lease survives 20 s in which it does not answer (SIGSTOP), grace period included, with its page; the idle timeout (8 s here) still stops a browser with an open page";
+    return result;
+}
+
+CheckResult check_browser_session_restore(const std::string&) {
+    const auto run_case = [](const std::string& label, const std::string& restore, const std::string& expected) {
+        return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, expected](const StartedGate&, const Context& context, CheckResult& inner) {
+            cdp(context, "set");
+            const auto restarted = context.run("start", 120000);
+            if (restarted.exit_code != 0) inner.failures.push_back("start after the browser closed did not report a ready browser: " + restarted.err.substr(0, 300));
+            const std::string cookies = cdp(context, "get");
+            if (cookies.find("cookies " + expected) == std::string::npos) inner.failures.push_back("with PLAYWRITER_RESTORE_SESSION=" + restore + " the cookies after a stop and start were [" + cookies.substr(0, 200) + "], expected [" + expected + "]");
+        });
+    };
+    CheckResult result = run_case("session-restore", "1", "persistent,sess");
+    CheckResult plain = run_case("session-plain", "0", "persistent");
+    for (const std::string& failure : plain.failures) result.failures.push_back(failure);
+    if (result.failures.empty()) result.summary = "a persistent cookie survives a stop and start of the project browser either way; a session cookie survives only with PLAYWRITER_RESTORE_SESSION=1 (the browser is started with --restore-last-session), which also reopens the tabs";
+    return result;
+}
 }
 #else
 
@@ -355,6 +444,18 @@ CheckResult check_gate_handoff(const std::string&) {
 }
 
 CheckResult check_browser_profile_cache(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_keeps_pages(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_session_restore(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;
