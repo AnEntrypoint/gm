@@ -1,0 +1,49 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index 9ec8506..2995381 100644
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -25,6 +25,8 @@ const GRACE_MS = 5000;
+ const SETTLE_MS = 2000;
+ const START_ATTEMPTS = 3;
+ const LAUNCHER_BUILD = crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex').slice(0, 12);
++const LAUNCHER_LOADED = fs.statSync(__filename).mtimeMs;
++const HANDOVER_IDLE_MS = Number(process.env.PLAYWRITER_HANDOVER_IDLE_MS) || 60000;
+ const BLANK_GRACE_MS = 20000;
+ const blankSince = new Map();
+ const CHROME_TRIMS = [
+@@ -781,7 +783,8 @@ function runGate({ gate, debug }) {
+     const params = new URLSearchParams(query);
+     if (route === '/__pwp/ping') return res.end(JSON.stringify({ project: PROJECT, pid: process.pid, build: LAUNCHER_BUILD }));
+     if (route === '/__pwp/handoff') {
+-      if (leaseHolders.size > 0) return res.writeHead(409).end(`${leaseHolders.size} lease(s) held\n`);
++      if (!(Number(params.get('loaded')) > LAUNCHER_LOADED)) return res.writeHead(409).end('the caller is not a newer launcher\n');
++      if ([...leaseHolders.values()].some((lease) => lease.busy > 0 || Date.now() - lease.lastCall < HANDOVER_IDLE_MS)) return res.writeHead(409).end(`${leaseHolders.size} lease(s) held\n`);
+       res.end('ok\n');
+       return setTimeout(() => handOver('handed over to a newer launcher'), 50);
+     }
+@@ -789,7 +792,7 @@ function runGate({ gate, debug }) {
+     if (route === '/__pwp/close' && req.method === 'POST') return respondJson(res, closeFromCaller(params));
+     if (route === '/__pwp/lease') {
+       const id = ++leaseSeq;
+-      leaseHolders.set(id, { pid: Number(req.headers['x-pwp-pid']) || null, since: Date.now(), busy: 0 });
++      leaseHolders.set(id, { pid: Number(req.headers['x-pwp-pid']) || null, since: Date.now(), busy: 0, lastCall: Date.now() });
+       everLeased = true;
+       lastLeaseEvent = Date.now();
+       clearTimeout(graceTimer);
+@@ -809,6 +812,7 @@ function runGate({ gate, debug }) {
+       const lease = leaseHolders.get(Number(params.get('id')));
+       if (lease) {
+         lease.busy = Math.max(0, lease.busy + Number(params.get('delta')));
++        lease.lastCall = Date.now();
+         lastLeaseEvent = Date.now();
+         touch();
+       }
+@@ -939,7 +943,7 @@ function runGate({ gate, debug }) {
+ 
+ async function handedOver(port, ping) {
+   if (!ping.build || ping.build === LAUNCHER_BUILD) return false;
+-  const reply = await httpGet(port, '/__pwp/handoff', 3000);
++  const reply = await httpGet(port, `/__pwp/handoff?loaded=${LAUNCHER_LOADED}`, 3000);
+   if (reply.status !== 200) return false;
+   return waitFor(async () => !(await httpOk(port, '/__pwp/ping', 500)), 15000);
+ }

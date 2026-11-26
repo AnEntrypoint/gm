@@ -2,8 +2,10 @@
 #include "support.hpp"
 #if !defined(_WIN32)
 
+#include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -12,7 +14,10 @@
 #include <set>
 #include <sstream>
 #include <system_error>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <thread>
+#include <unistd.h>
 
 namespace gm::tool {
 namespace fs = std::filesystem;
@@ -465,6 +470,95 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 })().catch((e) => { console.log('error ' + e.message); process.exit(1); });
 )JS";
 
+const char* const kHttpStatusScript = R"JS(
+const http = require('http');
+const port = Number(process.argv[1]);
+http.get({ host: '127.0.0.1', port, path: process.argv[2], timeout: 3000 }, (res) => { res.resume(); res.on('end', () => console.log('status ' + res.statusCode)); }).on('error', (e) => console.log('error ' + e.code));
+)JS";
+
+int lease_socket(int port, long long& lease_id) {
+    const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+    timeval timeout{};
+    timeout.tv_sec = 3;
+    ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<std::uint16_t>(port));
+    ::inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);
+    if (::connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof address) != 0) {
+        ::close(fd);
+        return -1;
+    }
+    const std::string request = "GET /__pwp/lease HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Pwp-Pid: 1\r\n\r\n";
+    ::send(fd, request.data(), request.size(), 0);
+    std::string text;
+    char buffer[256];
+    for (int tries = 0; tries < 20 && text.find("leased ") == std::string::npos; ++tries) {
+        const ssize_t got = ::recv(fd, buffer, sizeof buffer, 0);
+        if (got <= 0) break;
+        text.append(buffer, static_cast<std::size_t>(got));
+    }
+    const std::size_t at = text.find("leased ");
+    if (at == std::string::npos) {
+        ::close(fd);
+        return -1;
+    }
+    lease_id = std::stoll(text.substr(at + 7));
+    return fd;
+}
+
+CheckResult check_browser_idle_handover(const std::string&) {
+    const auto status_of = [](const Context& context, int port, const std::string& path) {
+        const auto reply = proc::run({"node", "-e", kHttpStatusScript, std::to_string(port), path}, context.workspace, {}, 20000);
+        return reply.out + reply.err;
+    };
+    CheckResult idle = with_started_gate("handover-idle", {"PLAYWRITER_HANDOVER_IDLE_MS=2000"}, [&](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        long long lease = 0;
+        const int fd = lease_socket(gate.port, lease);
+        if (fd < 0) {
+            inner.failures.push_back("the gate did not grant a lease");
+            return;
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(4));
+        const std::string reply = status_of(context, gate.port, "/__pwp/handoff?loaded=9999999999999");
+        if (reply.find("status 200") == std::string::npos) {
+            inner.failures.push_back("a lease with no call for 4 s (bound 2 s) blocked the handover: " + reply);
+        } else {
+            bool gone = false;
+            for (int tenth = 0; tenth < 150 && !gone; ++tenth) {
+                gone = proc::start_time_of(gate.gate_pid) == 0;
+                if (!gone) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (!gone) inner.failures.push_back("the handed-over gate (pid " + std::to_string(gate.gate_pid) + ") did not exit");
+            if (proc::start_time_of(gate.browser_pid) != gate.browser_started) inner.failures.push_back("the handover stopped the browser (pid " + std::to_string(gate.browser_pid) + ")");
+        }
+        ::close(fd);
+    });
+    CheckResult busy = with_started_gate("handover-busy", {"PLAYWRITER_HANDOVER_IDLE_MS=2000"}, [&](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        long long lease = 0;
+        const int fd = lease_socket(gate.port, lease);
+        if (fd < 0) {
+            inner.failures.push_back("the gate did not grant a lease for the busy case");
+            return;
+        }
+        status_of(context, gate.port, "/__pwp/busy?id=" + std::to_string(lease) + "&delta=1");
+        std::this_thread::sleep_for(std::chrono::seconds(4));
+        const std::string reply = status_of(context, gate.port, "/__pwp/handoff?loaded=9999999999999");
+        if (reply.find("status 409") == std::string::npos) inner.failures.push_back("a lease with a call in flight did not block the handover: " + reply);
+        ::close(fd);
+    });
+    CheckResult older = with_started_gate("handover-older", {"PLAYWRITER_HANDOVER_IDLE_MS=2000"}, [&](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        const std::string reply = status_of(context, gate.port, "/__pwp/handoff");
+        if (reply.find("status 409") == std::string::npos) inner.failures.push_back("a handoff from a caller that is not newer than the gate was accepted: " + reply);
+        if (proc::start_time_of(gate.gate_pid) == 0) inner.failures.push_back("the gate exited on an older caller's handoff");
+    });
+    for (const std::string& failure : busy.failures) idle.failures.push_back(failure);
+    for (const std::string& failure : older.failures) idle.failures.push_back(failure);
+    if (idle.failures.empty()) idle.summary = "an idle lease (no call for 2 s here) hands the gate over with its browser kept; a lease with a call in flight blocks the handover; a handoff from a caller that is not newer than the gate is refused";
+    return idle;
+}
+
 CheckResult check_browser_last_window(const std::string&) {
     if (std::getenv("DISPLAY") == nullptr) {
         CheckResult skipped;
@@ -619,6 +713,12 @@ CheckResult check_browser_keeps_pages(const std::string&) {
 }
 
 CheckResult check_browser_start_closing(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_idle_handover(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;
