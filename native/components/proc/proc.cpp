@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 #include <fstream>
 #include <iterator>
 #include <sstream>
@@ -65,10 +66,19 @@ void kill_tree(long long pid) {
 
 }
 
+std::string read_text_of(const std::string& path) {
+    std::string text;
+    std::FILE* file = std::fopen(path.c_str(), "rb");
+    if (file == nullptr) return text;
+    char block[4096];
+    for (std::size_t got; (got = std::fread(block, 1, sizeof block, file)) > 0;) text.append(block, got);
+    std::fclose(file);
+    return text;
+}
+
 long long start_time_of(long long pid) {
 #if defined(__linux__)
-    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
-    std::string text((std::istreambuf_iterator<char>(stat)), std::istreambuf_iterator<char>());
+    const std::string text = read_text_of("/proc/" + std::to_string(pid) + "/stat");
     const std::size_t close = text.rfind(')');
     if (close == std::string::npos) return 0;
     std::istringstream fields(text.substr(close + 2));
@@ -144,8 +154,7 @@ std::filesystem::path process_exe(long long pid) {
 std::vector<std::string> command_of(long long pid) {
     std::vector<std::string> args;
 #if defined(__linux__)
-    std::ifstream cmdline("/proc/" + std::to_string(pid) + "/cmdline", std::ios::binary);
-    const std::string bytes((std::istreambuf_iterator<char>(cmdline)), std::istreambuf_iterator<char>());
+    const std::string bytes = read_text_of("/proc/" + std::to_string(pid) + "/cmdline");
     std::string arg;
     for (const char ch : bytes) {
         if (ch == '\0') {

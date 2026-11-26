@@ -76,6 +76,20 @@ CheckResult check_scratch_sweep(const std::string& binary) {
     expect(fs::exists(copy(dead[3]), ec), "a ship copy without a marker was removed");
     expect(fs::exists(copy(live), ec), "the ship copy of a live process was removed");
     expect(fs::exists(probe / "g1obs", ec), "a directory that is not named g and a process id was removed");
+    const fs::path racing = fs::temp_directory_path() / "sweep-race";
+    fs::create_directories(racing, ec);
+    long long appeared = 0;
+    const std::size_t removed_in_race = sweep_dead_scratch(racing, [&] {
+        appeared = live;
+        make_dir(racing / ("g" + std::to_string(live)), kScratchMarker, "");
+        std::vector<proc::ProcessRow> others;
+        for (const auto& row : proc::process_table())
+            if (row.pid != live) others.push_back(row);
+        return others;
+    });
+    expect(appeared == live, "the sweep did not read the process table");
+    expect(removed_in_race == 0 && fs::exists(racing / ("g" + std::to_string(live)), ec), "a scratch root created after the sweep listed the directory, by a process the table taken just before had not seen, was removed");
+    fs::remove_all(racing, ec);
     fs::remove_all(probe, ec);
     if (result.failures.empty()) result.summary = "a gm-tool check run removes the scratch roots and ship copies that gm-tool marked and whose process ended, and spares a live process's, an unmarked directory and any other name";
     return result;

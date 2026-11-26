@@ -223,8 +223,7 @@ inline fs::path checkout_root() {
 
 inline bool is_zombie(long long pid) {
 #if defined(__linux__)
-    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
-    const std::string text((std::istreambuf_iterator<char>(stat)), std::istreambuf_iterator<char>());
+    const std::string text = proc::read_text_of("/proc/" + std::to_string(pid) + "/stat");
     const std::size_t close = text.rfind(')');
     return close != std::string::npos && close + 2 < text.size() && text[close + 2] == 'Z';
 #else

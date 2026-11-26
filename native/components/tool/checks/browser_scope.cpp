@@ -185,8 +185,7 @@ bool under(const std::string& path, const fs::path& root) {
 std::string environment_of(long long pid, const std::string& key) {
     const std::string prefix = key + "=";
 #if defined(__linux__)
-    std::ifstream file("/proc/" + std::to_string(pid) + "/environ", std::ios::binary);
-    const std::string bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const std::string bytes = proc::read_text_of("/proc/" + std::to_string(pid) + "/environ");
     std::size_t at = 0;
     while (at < bytes.size()) {
         std::size_t end = bytes.find('\0', at);

@@ -357,7 +357,7 @@ const char* const kCdpScript =
     "    await get('/json/new?http://127.0.0.1:' + port + '/json/version', 'PUT');"
     "    await new Promise((r) => setTimeout(r, 1500));"
     "    ws.send(JSON.stringify({ id: ++id, method: 'Browser.close' }));"
-    "    await new Promise((r) => setTimeout(r, 1000));"
+    "    await new Promise((r) => setTimeout(r, 300));"
     "  } else { const r = await call('Storage.getCookies', {}); console.log('cookies ' + (r.result?.cookies ?? []).map((c) => c.name).sort().join(',')); ws.close(); }"
     "  process.exit(0);"
     "})().catch((e) => { console.log('error ' + e.message); process.exit(1); });";
@@ -406,8 +406,17 @@ CheckResult check_browser_keeps_pages(const std::string&) {
 
 CheckResult check_browser_session_restore(const std::string&) {
     const auto run_case = [](const std::string& label, const std::string& restore, const std::string& expected) {
-        return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, expected](const StartedGate&, const Context& context, CheckResult& inner) {
+        return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, expected](const StartedGate& gate, const Context& context, CheckResult& inner) {
             cdp(context, "set");
+            bool closed = false;
+            for (int tenth = 0; tenth < 600 && !closed; ++tenth) {
+                closed = proc::start_time_of(gate.browser_pid) != gate.browser_started;
+                if (!closed) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (!closed) {
+                inner.failures.push_back("the browser (pid " + std::to_string(gate.browser_pid) + ") was still running 60 s after Browser.close");
+                return;
+            }
             const auto restarted = context.run("start", 120000);
             if (restarted.exit_code != 0) inner.failures.push_back("start after the browser closed did not report a ready browser: " + restarted.err.substr(0, 300));
             const std::string cookies = cdp(context, "get");

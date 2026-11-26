@@ -5,6 +5,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <optional>
 #include <memory>
@@ -141,6 +142,7 @@ int phase_b_command(const std::filesystem::path& root, const std::filesystem::pa
 extern const char* const kScratchMarker;
 extern const char* const kShipCopyMarkerSuffix;
 std::size_t sweep_dead_scratch(const std::filesystem::path& temp);
+std::size_t sweep_dead_scratch(const std::filesystem::path& temp, const std::function<std::vector<proc::ProcessRow>()>& process_table);
 int ship_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int ship_push(const std::filesystem::path& root);
 int pre_push_command(const std::filesystem::path& root);

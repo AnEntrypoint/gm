@@ -107,8 +107,7 @@ void write_pairs(const fs::path& path, const std::map<std::string, std::string>&
 }
 
 bool environ_has(const std::string& pid, const std::string& entry) {
-    std::ifstream in("/proc/" + pid + "/environ", std::ios::binary);
-    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const std::string text = proc::read_text_of("/proc/" + pid + "/environ");
     std::size_t start = 0;
     while (start < text.size()) {
         const std::size_t end = text.find('\0', start);

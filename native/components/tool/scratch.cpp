@@ -42,22 +42,36 @@ const char* const kScratchMarker = ".gm-tool-scratch";
 const char* const kShipCopyMarkerSuffix = ".gm-ship-copy";
 
 std::size_t sweep_dead_scratch(const fs::path& temp) {
-    std::set<long long> alive;
-    for (const auto& row : proc::process_table()) alive.insert(row.pid);
-    if (alive.empty()) return 0;
-    std::vector<fs::path> doomed;
+    return sweep_dead_scratch(temp, [] { return proc::process_table(); });
+}
+
+std::size_t sweep_dead_scratch(const fs::path& temp, const std::function<std::vector<proc::ProcessRow>()>& process_table) {
+    struct Candidate {
+        fs::path path;
+        long long root_pid;
+        long long copy_pid;
+    };
+    std::vector<Candidate> listed;
     std::error_code ec;
     for (const auto& entry : fs::directory_iterator(temp, ec)) {
         const std::string name = entry.path().filename().string();
         std::error_code entry_ec;
         if (!entry.is_directory(entry_ec) || entry.is_symlink(entry_ec)) continue;
         const long long root_pid = scratch_root_pid(name);
-        if (root_pid > 0 && !alive.count(root_pid) && fs::exists(entry.path() / kScratchMarker, entry_ec)) {
-            doomed.push_back(entry.path());
+        const long long copy_pid = ship_copy_pid(name);
+        if (root_pid > 0 || copy_pid > 0) listed.push_back({entry.path(), root_pid, copy_pid});
+    }
+    std::set<long long> alive;
+    for (const auto& row : process_table()) alive.insert(row.pid);
+    if (alive.empty()) return 0;
+    std::vector<fs::path> doomed;
+    for (const Candidate& candidate : listed) {
+        std::error_code entry_ec;
+        if (candidate.root_pid > 0 && !alive.count(candidate.root_pid) && fs::exists(candidate.path / kScratchMarker, entry_ec)) {
+            doomed.push_back(candidate.path);
             continue;
         }
-        const long long copy_pid = ship_copy_pid(name);
-        if (copy_pid > 0 && !alive.count(copy_pid) && fs::exists(temp / (name + kShipCopyMarkerSuffix), entry_ec)) doomed.push_back(entry.path());
+        if (candidate.copy_pid > 0 && !alive.count(candidate.copy_pid) && fs::exists(temp / (candidate.path.filename().string() + kShipCopyMarkerSuffix), entry_ec)) doomed.push_back(candidate.path);
     }
     std::size_t removed = 0;
     for (const fs::path& dir : doomed) {

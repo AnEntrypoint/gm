@@ -51,6 +51,7 @@ struct ProcessRow {
 
 std::vector<ProcessRow> process_table();
 std::filesystem::path process_exe(long long pid);
+std::string read_text_of(const std::string& path);
 std::vector<std::string> command_of(long long pid);
 long long start_time_of(long long pid);
 long long resident_kb(long long pid);
