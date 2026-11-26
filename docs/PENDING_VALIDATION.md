@@ -6324,3 +6324,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: tools/phase-b/window.sh selects its part of the checks.def rows with part_of, the same index helper as the reds, WITNESS_PARTS (default 3); the install runs in each witnesses part, and the parity probe runs only in witnesses<WITNESS_PARTS>. part_is is removed. tools/phase-b/parts.sh takes an optional part list (default build, witnesses1 to witnesses3, reds1 to reds4), sets GATE_EXCLUSIVE only for witnesses parts (they measure time), and sets GATE_TREE to the short HEAD so a part that passed on its tree prints CACHED.
 - Witness: each witnesses part prints WITNESSES witnesses<k> and WITNESSES_DONE in window.txt, the three slices add to all checks.def rows, and PARITY_RC appears once, in witnesses3.
 - Red: none. The split changes which part runs a check, not any check or the parity probe.
+
+### 82. The gm skill states the gate rule in its Time section (Phase A, not run)
+
+- Found by the dispatcher's gate-rules item (docs/peer-rules.md, The gate): a window needs GATE_TREE, a passed label prints CACHED, GATE_FORCE only for changed code or witness, GATE_EXCLUSIVE only for timing or memory-peak windows.
+- Change: skills/gm/SKILL.md, Time section, one bullet named Gate in general terms.
+- Witness: skill://gm/SKILL.md served by gm.read_file on the commit that carries this item contains the Gate bullet.
+- Red: none; a skill is read on the next call and carries no check of its own.
