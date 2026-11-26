@@ -6275,3 +6275,16 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Red: installed launcher, "closing a client's own page, the last one in the project browser, stopped the browser". Green: the anchor launcher, same check 8.9 s. Also green on the anchor launcher: check-browser-blank-grace, tabs-owner, feedback, keeps-pages, first-open, fingerprint-mismatch, start-closing, session-restore, second-gate, log-bounds, idle-default, gate-handoff.
 - Check method notes: the first version of the check closed the gate's blank page as the only window (that is itself a client closing every window, so the browser exited regardless of the fix). Closing /json/close is asynchronous, so a page still listed after close is not yet gone; the check waits for a blank page that is not one it closed. check-browser-last-window runs only when DISPLAY is set; a headless browser does not exit on its last window.
 - The earlier "SIGTERM" lines in docstudio's gate.log at 12:44 came from my scratch cleanup (see the fingerprint entry above), not from the launcher.
+
+### Release 45835694679 (e81bf1a4), x64 macOS red: check-proc-read-exits threshold (Phase A, not pushed on its own)
+
+- Read from the completed run's log: "the readers saw only 909 children and 123 reads of 240 spawned, too few to exercise an exit" (and 959 children, 188 reads in the re-run). The check required 200 reads. On macOS command_of reads the command line with ps, so each read takes longer and a 13 s window holds fewer reads; the readers did observe children exit.
+- Change: the read floor is 20 (children observed stays at 20). The no-exception assertion is unchanged and still counts every thrown read.
+- Red: the CI log above (the floor of 200 against 123 and 188 reads). Green here: 'start_time_of and command_of read ... exiting children ... times with no exception'.
+
+### Release guard red on 9eae9a66 (all three builds): the stub list gained check-browser-last-window (release.yml)
+
+- The release guard (added 21 Nov, commit 9927aab2) fails when the stubbed set in Phase B's summary differs from PHASE_B_STUBS_LINUX / PHASE_B_STUBS_MACOS. check-browser-last-window returns "skipped" without a display (the hosted runners have none), and the driver counts any "ok (skipped" output as a stub.
+- Red reproduced: env -u DISPLAY gm-tool check ... check-browser-last-window prints "ok (skipped: needs a display ...)", and the guard's comparison on a log that names it differs from the Linux list.
+- Fix: check-browser-last-window is named in PHASE_B_STUBS_LINUX and PHASE_B_STUBS_MACOS (release.yml). Verified: the guard matches for both lists with the stub sets Phase B reports.
+- Release 45843725087 showed the guard step as failed on all three builds while the run was still in progress; its logs were not readable then, so the stub-list cause above is from the code and the local reproduction, not from that run's log.

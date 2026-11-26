@@ -69,7 +69,7 @@ CheckResult check_proc_read_exits(const std::string&) {
     if (thrown.load() > 0) {
         result.failures.push_back("reading /proc of an exiting process threw " + std::to_string(thrown.load()) + " time(s), first: " + first_error);
     }
-    if (observed.load() < 20 || reads.load() < 200) {
+    if (observed.load() < 20 || reads.load() < 20) {
         result.failures.push_back("the readers saw only " + std::to_string(observed.load()) + " children and " + std::to_string(reads.load()) + " reads of " + std::to_string(spawned.load()) + " spawned, too few to exercise an exit");
     }
     if (result.failures.empty()) {

@@ -20,8 +20,8 @@ permissions:
 env:
   RELEASE_REPO: AnEntrypoint/gm
   GMNEW_AUTO_UPDATE: "0"
-  PHASE_B_STUBS_LINUX: "check-asan-retention witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter"
-  PHASE_B_STUBS_MACOS: "check-dead-symbols check-handover-in-flight check-update-order check-stamp-tree check-install-build-id check-body-reexec check-asan-retention witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter"
+  PHASE_B_STUBS_LINUX: "check-asan-retention check-browser-last-window witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter"
+  PHASE_B_STUBS_MACOS: "check-dead-symbols check-handover-in-flight check-update-order check-stamp-tree check-install-build-id check-body-reexec check-asan-retention check-browser-last-window witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter"
 
 jobs:
   build:
