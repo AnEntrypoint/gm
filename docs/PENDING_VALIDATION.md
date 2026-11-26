@@ -6308,7 +6308,7 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 
 - Found by queue item 1: in phase-rc30 reds1 ran 55 min and reds2 ran 49 min in the gate, over the 30-minute part limit. witnesses ran 19 min.
 - Change: tools/phase-b/window.sh selects reds part k of REDS_PARTS (default 4) as an equal contiguous range of the red ids. tools/phase-b/parts.sh queues build, witnesses, reds1, reds2, reds3 and reds4 as separate gate tickets.
-- Witness: each reds part prints REDS reds<k>: <count> reds: <ids> in window.txt. The four counts add to the total of 27 reds, and the last part holds the remainder.
+- Witness: each reds part prints REDS reds<k>: <count> reds: <ids> in window.txt. The four counts add to the total of 54 reds (14, 14, 14 and 12).
 - Red: none. The split changes which reds a part runs, not any red mutation or check.
 
 ### 80. gm-tool ship pushes with the binary that ran Phase B, not the stale build/release tool (Phase A, not run)
@@ -6317,3 +6317,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: native/components/tool/ship_push.cpp pushes through env GM_TOOL=<this executable> git push, so the hook runs the binary that gated the push, and a failed push prints git error text. current_executable moves from native/components/host/child.cpp into gm::proc (native/components/proc/executable.cpp, declared in native/include/gm/proc.hpp). host/include/gm/host/child.hpp re-exports it with a using-declaration, and gm_host drops child.cpp.
 - Witness: the ship push on the commit that carries this item prints PUSHED, and git ls-remote origin main shows that commit.
 - Red: none.
+
+### 81. The witnesses run in three parts, and the parity probe runs once in the last one (Phase A, not run)
+
+- Found by queue item 1: in phase-rc31 the witnesses part ran 45 minutes in the gate (the 165 checks run one after another), over the 30-minute part limit.
+- Change: tools/phase-b/window.sh selects its part of the checks.def rows with part_of, the same index helper as the reds, WITNESS_PARTS (default 3); the install runs in each witnesses part, and the parity probe runs only in witnesses<WITNESS_PARTS>. part_is is removed. tools/phase-b/parts.sh takes an optional part list (default build, witnesses1 to witnesses3, reds1 to reds4), sets GATE_EXCLUSIVE only for witnesses parts (they measure time), and sets GATE_TREE to the short HEAD so a part that passed on its tree prints CACHED.
+- Witness: each witnesses part prints WITNESSES witnesses<k> and WITNESSES_DONE in window.txt, the three slices add to all checks.def rows, and PARITY_RC appears once, in witnesses3.
+- Red: none. The split changes which part runs a check, not any check or the parity probe.

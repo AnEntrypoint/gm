@@ -14,7 +14,10 @@ GM=$BUILD/native/components/host/gm
 FAILED=0
 
 say() { echo "$*" | tee -a "$LOG"; }
-part_is() { [ "${PART:-all}" = all ] || [ "$PART" = "$1" ]; }
+part_of() {
+  if [ "${PART:-all}" = all ]; then cat; return; fi
+  awk -v k="${PART//[!0-9]/}" -v n="$1" '{ a[NR] = $0 } END { s = int((NR + n - 1) / n); for (i = (k - 1) * s + 1; i <= k * s && i <= NR; i++) print a[i] }'
+}
 
 if [ "${PART:-all}" = build ]; then
   git update-ref refs/remotes/origin/main HEAD
@@ -80,29 +83,29 @@ for _ in $(seq 60); do
 done
 [ $clear -eq 1 ] || { say "NOT_CLEAR"; exit 3; }
 say "CLEAR"
-if part_is witnesses; then
+WITNESS_PARTS=${WITNESS_PARTS:-3}
+if [ "${PART:-all}" = all ] || [[ "${PART:-all}" == witnesses* ]]; then
   $GM install --local "$BUILD" --source "$PWD" > "$OUT/home-install.txt" 2>&1 || { FAILED=1; say "FAILED home-install"; }
 
-  say "WITNESSES"
-  for name in $(sed -n 's/^CHECK("\([^"]*\)".*/\1/p' native/include/gm/checks.def); do
+  say "WITNESSES ${PART:-all}"
+  for name in $(sed -n 's/^CHECK("\([^"]*\)".*/\1/p' native/include/gm/checks.def | part_of "$WITNESS_PARTS"); do
     step "w-$name" "$GM_TOOL" check "$GM" "$name" || { FAILED=1; say "FAILED w-$name"; }
   done
   say "WITNESSES_DONE FAILED=$FAILED"
 
-  mkdir -p "$OUT/parity/ws"
-  guard "before parity"
-  HOME=/config timeout 900 python3 $PB/rpc-until.py "$GM" "$OUT/parity/ws" $PB/parity-body.js "$OUT/parity/out.txt" > "$OUT/parity/probe.txt" 2>&1
-  say "PARITY_RC=$?"
-  guard "after parity"
-  python3 -I $PB/parity-verdict.py "$OUT/parity/out.txt" && say "PARITY_OK" || { FAILED=1; say "PARITY_FAILED"; }
+  if [ "${PART:-all}" = all ] || [ "$PART" = "witnesses$WITNESS_PARTS" ]; then
+    mkdir -p "$OUT/parity/ws"
+    guard "before parity"
+    HOME=/config timeout 900 python3 $PB/rpc-until.py "$GM" "$OUT/parity/ws" $PB/parity-body.js "$OUT/parity/out.txt" > "$OUT/parity/probe.txt" 2>&1
+    say "PARITY_RC=$?"
+    guard "after parity"
+    python3 -I $PB/parity-verdict.py "$OUT/parity/out.txt" && say "PARITY_OK" || { FAILED=1; say "PARITY_FAILED"; }
+  fi
 fi
 
 REDS_PARTS=${REDS_PARTS:-4}
 if [ "${PART:-all}" = all ] || [[ "${PART:-all}" == reds[0-9]* ]]; then
-  ids=$(python3 $PB/red.py ids | tr ' ' '\n' | grep .)
-  if [ "${PART:-all}" != all ]; then
-    ids=$(echo "$ids" | awk -v k="${PART#reds}" -v n="$REDS_PARTS" '{ a[NR] = $0 } END { s = int((NR + n - 1) / n); for (i = (k - 1) * s + 1; i <= k * s && i <= NR; i++) print a[i] }')
-  fi
+  ids=$(python3 $PB/red.py ids | tr ' ' '\n' | grep . | part_of "$REDS_PARTS")
   say "REDS ${PART:-all}: $(echo $ids | wc -w) reds: $(echo $ids)"
   for id in $ids; do
     RED_LOGS=$OUT/reds step "red-$id" python3 $PB/red.py "$id" || { FAILED=1; say "FAILED red-$id"; }
