@@ -29,6 +29,26 @@ const std::set<std::string> kExclusive{"check-relay-reexec", "check-browser-scop
 
 using Clock = std::chrono::steady_clock;
 
+struct CheckHome {
+    CheckHome() {
+        std::error_code ec;
+        path_ = fs::temp_directory_path(ec) / ("pbh-" + std::to_string(::getpid()));
+        const char* real = std::getenv("HOME");
+        fs::create_directories(path_ / ".gmnew", ec);
+        fs::copy(fs::path(real != nullptr ? real : "") / ".gmnew" / "pw", path_ / ".gmnew" / "pw", fs::copy_options::recursive, ec);
+    }
+    ~CheckHome() {
+        std::error_code ec;
+        fs::remove_all(path_, ec);
+    }
+    CheckHome(const CheckHome&) = delete;
+    CheckHome& operator=(const CheckHome&) = delete;
+    const fs::path& path() const { return path_; }
+
+private:
+    fs::path path_;
+};
+
 struct Fnv {
     std::uint64_t value = 1469598103934665603ULL;
     void add(std::string_view bytes) {
@@ -183,6 +203,8 @@ public:
         const auto before = tree_state(root_);
         std::error_code ec;
         fs::create_directories(logs_, ec);
+        CheckHome home;
+        check_home_ = home.path();
         cache_ = read_pairs(cache_path_);
         for (const auto& [name, value] : read_pairs(durations_path_)) durations_[name] = std::atof(value.c_str());
         const char* jobs_env = std::getenv("GM_CHECK_JOBS");
@@ -304,7 +326,7 @@ private:
     bool run_one(const Job& job) {
         const std::string entry = "GM_CHECK_TREE=" + marker_ + "-" + std::to_string(serial_.fetch_add(1));
         const auto at = Clock::now();
-        auto outcome = proc::run({"env", entry, tool_.string(), "check", gm_, job.name}, root_, {}, kCheckTimeoutMs);
+        auto outcome = proc::run({"env", entry, "HOME=" + check_home_.string(), tool_.string(), "check", gm_, job.name}, root_, {}, kCheckTimeoutMs);
         const double wall = std::chrono::duration<double>(Clock::now() - at).count();
         const auto leftover = stop_marked(entry);
         std::string text = outcome.out + outcome.err;
@@ -378,6 +400,7 @@ private:
     fs::path logs_;
     fs::path cache_path_;
     fs::path durations_path_;
+    fs::path check_home_;
     std::string marker_;
     std::atomic<std::uint64_t> serial_{0};
     int lanes_ = 1;
