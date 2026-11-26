@@ -19,8 +19,11 @@ part_of() {
   awk -v k="${PART//[!0-9]/}" -v n="$1" '{ a[NR] = $0 } END { s = int((NR + n - 1) / n); for (i = (k - 1) * s + 1; i <= k * s && i <= NR; i++) print a[i] }'
 }
 
+REAL_ORIGIN=$(git rev-parse refs/remotes/origin/main)
+trap 'git update-ref refs/remotes/origin/main "$REAL_ORIGIN"' EXIT
+git update-ref refs/remotes/origin/main HEAD
+
 if [ "${PART:-all}" = build ]; then
-  git update-ref refs/remotes/origin/main HEAD
   cmake --preset x64-linux-release -B "$BUILD" -DGMNEW_VERSION="$(git rev-parse --short=7 HEAD)-1" > "$OUT/build.log" 2>&1 && cmake --build "$BUILD" -j3 >> "$OUT/build.log" 2>&1
   code=$?
   ninja -C "$BUILD" -t cleandead >> "$OUT/build.log" 2>&1

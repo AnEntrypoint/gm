@@ -6345,3 +6345,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: window.sh restores HOME=/config for rpc-until.py (ledger 84 reverted by the revert commit that carries this item).
 - Witness: witnesses3 on that commit prints PARITY_OK.
 - Red: none.
+
+### 86. Every window sets origin/main to HEAD for its own run and restores the real ref on exit (Phase A, not run)
+
+- Found by queue item 2: witnesses3 alone failed the three update checks, because the build part was the only part that set refs/remotes/origin/main to HEAD, and build_is_clean reads a HEAD that is not origin/main as unpushed. A window that left the fake ref behind also left origin/main wrong for the next ship's fetch.
+- Change: tools/phase-b/window.sh sets refs/remotes/origin/main to HEAD for every part, after saving the real ref, and an EXIT trap restores the saved ref. The build part no longer sets the ref itself.
+- Witness: witnesses3 run alone on the commit that carries this item prints WITNESSES_DONE FAILED=0, and after the window git rev-parse refs/remotes/origin/main equals the real origin.
+- Red: none; the change sets which ref each part sees, and the update checks are the witness.
