@@ -290,10 +290,11 @@ CheckResult check_browser_first_open(const std::string& binary) {
             const bool wrapper_called = calls_text.find("wrapper") != std::string::npos;
             const bool swiftshader = cmdline.find("--use-angle=swiftshader") != std::string::npos;
             summary << "; outside browser pid " << outside_pid << " became project browser pid " << browser_pid << ", wrapper called " << (wrapper_called ? "true" : "false") << ", command line read " << (command_read ? "true" : "false") << " (" << command.size() << " elements, " << cmdline.size() << " chars), SwiftShader flags " << (swiftshader ? "true" : "false");
-            if (!wrapper_called) failures.push_back("PLAYWRITER_BROWSER_PATH was not used: the browser started outside the launcher was adopted");
-            if (browser_pid <= 0 || browser_pid == outside_pid) failures.push_back("the browser started outside the launcher stayed the project browser");
+            const std::string gate_log = read_text(adopt_workspace / ".playwriter" / "gate.log");
+            if (wrapper_called) failures.push_back("a running browser started outside the launcher was restarted through PLAYWRITER_BROWSER_PATH; it must be adopted and the fingerprint difference logged");
+            if (browser_pid != outside_pid) failures.push_back("the browser started outside the launcher is not the project browser after the start (project browser pid " + std::to_string(browser_pid) + ")");
+            if (gate_log.find("the running browser is kept") == std::string::npos) failures.push_back("the adopted browser's fingerprint difference was not logged in the gate log");
             if (!command_read) failures.push_back("the project browser's command line could not be read on this platform");
-            if (!swiftshader) failures.push_back("the project browser was not started with the configured wrapper flags");
         }
     }
 

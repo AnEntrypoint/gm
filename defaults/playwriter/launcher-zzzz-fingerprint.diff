@@ -1,5 +1,5 @@
 diff --git a/bin/playwriter-project b/bin/playwriter-project
-index ddf7caa..c6dd02a 100644
+index ddf7caa..9f7ce75 100644
 --- a/bin/playwriter-project
 +++ b/bin/playwriter-project
 @@ -132,7 +132,25 @@ const gateFailureSince = (from) => {
@@ -78,7 +78,7 @@ index ddf7caa..c6dd02a 100644
 -      await stopAdopted(pid);
 -      return startChrome();
 -    }
-+    if (built !== null && built !== wanted) log(`browser pid ${pid ?? 'unknown'} was started as ${built}; this gate computes ${wanted}; the running browser is kept`);
++    if (built !== wanted) log(`browser pid ${pid ?? 'unknown'} was started as ${built ?? 'an unrecorded browser'}; this gate computes ${wanted}; the running browser is kept`);
      const owned = pid !== null && (pid === recorded || pid === owner);
      if (owned && pid !== recorded) fs.writeFileSync(BROWSER_PID, `${pid}\n`);
      const adopted = !owned;

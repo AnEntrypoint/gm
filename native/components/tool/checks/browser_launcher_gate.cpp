@@ -9,6 +9,7 @@
 #include <functional>
 #include <map>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <system_error>
 #include <thread>
@@ -491,8 +492,22 @@ CheckResult check_browser_log_bounds(const std::string&) {
 }
 
 CheckResult check_browser_session_restore(const std::string&) {
-    const auto run_case = [](const std::string& label, const std::string& restore, const std::string& expected) {
-        return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, expected](const StartedGate& gate, const Context& context, CheckResult& inner) {
+    const auto names_in = [](const std::string& reply) {
+        std::set<std::string> names;
+        const std::size_t at = reply.find("cookies ");
+        if (at == std::string::npos) return names;
+        std::istringstream line(reply.substr(at + 8));
+        std::string list;
+        std::getline(line, list);
+        std::istringstream items(list);
+        for (std::string name; std::getline(items, name, ',');) {
+            while (!name.empty() && (name.back() == '\r' || name.back() == ' ')) name.pop_back();
+            if (!name.empty()) names.insert(name);
+        }
+        return names;
+    };
+    const auto run_case = [&names_in](const std::string& label, const std::string& restore, const std::vector<std::string>& required, const std::vector<std::string>& absent) {
+        return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, required, absent, &names_in](const StartedGate& gate, const Context& context, CheckResult& inner) {
             cdp(context, "set");
             bool closed = false;
             for (int tenth = 0; tenth < 600 && !closed; ++tenth) {
@@ -505,12 +520,18 @@ CheckResult check_browser_session_restore(const std::string&) {
             }
             const auto restarted = context.run("start", 120000);
             if (restarted.exit_code != 0) inner.failures.push_back("start after the browser closed did not report a ready browser: " + restarted.err.substr(0, 300));
-            const std::string cookies = cdp(context, "get");
-            if (cookies.find("cookies " + expected) == std::string::npos) inner.failures.push_back("with PLAYWRITER_RESTORE_SESSION=" + restore + " the cookies after a stop and start were [" + cookies.substr(0, 200) + "], expected [" + expected + "]");
+            const std::string reply = cdp(context, "get");
+            const std::set<std::string> names = names_in(reply);
+            for (const std::string& name : required) {
+                if (!names.count(name)) inner.failures.push_back("with PLAYWRITER_RESTORE_SESSION=" + restore + " the cookies after a stop and start do not include " + name + " (got " + std::to_string(names.size()) + " names: " + support::tail_of(reply, 200) + ")");
+            }
+            for (const std::string& name : absent) {
+                if (names.count(name)) inner.failures.push_back("with PLAYWRITER_RESTORE_SESSION=" + restore + " the cookie " + name + " survived a stop and start, which needs PLAYWRITER_RESTORE_SESSION=1");
+            }
         });
     };
-    CheckResult result = run_case("session-restore", "1", "persistent,sess");
-    CheckResult plain = run_case("session-plain", "0", "persistent");
+    CheckResult result = run_case("session-restore", "1", {"persistent", "sess"}, {});
+    CheckResult plain = run_case("session-plain", "0", {"persistent"}, {"sess"});
     for (const std::string& failure : plain.failures) result.failures.push_back(failure);
     if (result.failures.empty()) result.summary = "a persistent cookie survives a stop and start of the project browser either way; a session cookie survives only with PLAYWRITER_RESTORE_SESSION=1 (the browser is started with --restore-last-session), which also reopens the tabs";
     return result;
