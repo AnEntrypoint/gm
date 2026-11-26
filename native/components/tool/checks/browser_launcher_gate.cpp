@@ -434,6 +434,53 @@ CheckResult check_browser_start_closing(const std::string&) {
     return result;
 }
 
+const char* const kCloseOwnScript = R"JS(
+const http = require('http');
+const port = Number(process.argv[1]);
+const req = (method, path) => new Promise((resolve, reject) => {
+  const r = http.request({ host: '127.0.0.1', port, path, method, timeout: 3000 }, (q) => { let b = ''; q.on('data', (c) => { b += c; }); q.on('end', () => resolve(b)); });
+  r.on('error', reject);
+  r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
+  r.end();
+});
+const pages = async () => JSON.parse(await req('GET', '/json/list')).filter((t) => t.type === 'page');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+(async () => {
+  await req('PUT', '/json/new?http://127.0.0.1:' + port + '/json/version');
+  let own = null;
+  for (let i = 0; i < 20 && !own; i++) {
+    own = (await pages()).find((t) => t.url.includes('/json/version')) ?? null;
+    if (!own) await sleep(200);
+  }
+  const closed = new Set();
+  for (const page of (await pages()).filter((t) => t.url === 'about:blank')) {
+    closed.add(page.id);
+    await req('GET', '/json/close/' + page.id);
+  }
+  for (let i = 0; i < 30 && !(await pages()).some((t) => t.url === 'about:blank' && !closed.has(t.id)); i++) await sleep(500);
+  if (own) await req('GET', '/json/close/' + own.id);
+  await sleep(3000);
+  console.log('closed own page ' + (own !== null));
+  process.exit(0);
+})().catch((e) => { console.log('error ' + e.message); process.exit(1); });
+)JS";
+
+CheckResult check_browser_last_window(const std::string&) {
+    if (std::getenv("DISPLAY") == nullptr) {
+        CheckResult skipped;
+        skipped.summary = "skipped: needs a display, since the launcher starts a headless browser without one";
+        return skipped;
+    }
+    CheckResult result = with_started_gate("last-window", {}, [](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        const auto reply = proc::run({"node", "-e", kCloseOwnScript, debug_port_of(context)}, context.workspace, {}, 90000);
+        if (reply.out.find("closed own page true") == std::string::npos) inner.failures.push_back("the client's own page was not closed: " + support::tail_of(reply.out + reply.err, 200));
+        if (proc::start_time_of(gate.browser_pid) != gate.browser_started) inner.failures.push_back("closing a client's own page, the last one in the project browser, stopped the browser (pid " + std::to_string(gate.browser_pid) + "); gate log: " + support::tail_of(read_text(context.workspace / ".playwriter" / "gate.log"), 300));
+        else if (cdp(context, "get").find("cookies ") == std::string::npos) inner.failures.push_back("the browser is up but no longer answers after a client closed its own page");
+    });
+    if (result.failures.empty()) result.summary = "closing the client's own page leaves the project browser running: the browser keeps a window the client does not own, so the last page closing does not exit a headful Chromium";
+    return result;
+}
+
 CheckResult check_browser_fingerprint_mismatch(const std::string&) {
     const auto mismatched_start = [](const Context& context) {
         const fs::path launcher = context.sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project";
@@ -572,6 +619,12 @@ CheckResult check_browser_keeps_pages(const std::string&) {
 }
 
 CheckResult check_browser_start_closing(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_last_window(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

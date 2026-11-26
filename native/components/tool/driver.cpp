@@ -25,7 +25,7 @@ namespace {
 
 constexpr std::uint64_t kCheckTimeoutMs = 600000;
 constexpr const char* kMutations = "clock-mutations";
-const std::set<std::string> kExclusive{"check-relay-reexec", "check-browser-scope", "check-lazy-browser", "check-browser-first-open", "check-browser-tabs-owner", "check-browser-idle-default", "check-browser-blank-grace", "check-browser-feedback", "check-browser-first-connect", "check-browser-start-reason", "check-browser-second-gate", "check-browser-ws-address", "check-gate-handoff", "check-browser-profile-cache", "check-browser-keeps-pages", "check-browser-session-restore", "check-browser-start-closing", "check-browser-log-bounds", "check-browser-fingerprint-mismatch"};
+const std::set<std::string> kExclusive{"check-relay-reexec", "check-browser-scope", "check-lazy-browser", "check-browser-first-open", "check-browser-tabs-owner", "check-browser-idle-default", "check-browser-blank-grace", "check-browser-feedback", "check-browser-first-connect", "check-browser-start-reason", "check-browser-second-gate", "check-browser-ws-address", "check-gate-handoff", "check-browser-profile-cache", "check-browser-keeps-pages", "check-browser-session-restore", "check-browser-start-closing", "check-browser-log-bounds", "check-browser-fingerprint-mismatch", "check-browser-last-window"};
 
 using Clock = std::chrono::steady_clock;
 

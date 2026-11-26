@@ -1,0 +1,69 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index 9f7ce75..9ec8506 100644
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -154,6 +154,28 @@ const browserFingerprint = () => {
+ const isCallerPage = (target) => target.type === 'page' && !target.url.startsWith('about:') && !target.url.startsWith('chrome://') && !target.url.startsWith('devtools://');
+ const playwriterSpawn = (args, options = {}) => spawn(process.execPath, [PLAYWRITER_BIN, ...args], { cwd: PROJECT, ...options });
+ 
++function httpPut(port, urlPath, timeout = 3000) {
++  return new Promise((resolve) => {
++    const req = http.request({ host: HOST, port, path: urlPath, method: 'PUT', timeout }, (res) => {
++      const chunks = [];
++      res.on('data', (chunk) => chunks.push(chunk));
++      res.on('end', () => {
++        try {
++          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
++        } catch {
++          resolve(null);
++        }
++      });
++    });
++    req.on('error', () => resolve(null));
++    req.on('timeout', () => {
++      req.destroy();
++      resolve(null);
++    });
++    req.end();
++  });
++}
++
+ function httpGet(port, urlPath, timeout = 3000) {
+   return new Promise((resolve) => {
+     const req = http.get({ host: HOST, port, path: urlPath, timeout }, (res) => {
+@@ -562,6 +584,7 @@ function runGate({ gate, debug }) {
+     starting ??= (async () => {
+       if (await probe()) await adopt();
+       else await startChrome();
++      await keepAnchor();
+       chromeUp = true;
+       missedProbes = 0;
+       lastStartFailure = null;
+@@ -806,8 +829,17 @@ function runGate({ gate, debug }) {
+       .catch((error) => socket.end(`HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n${startReason(error.message)}`));
+   });
+ 
+-  const closeBlankTabs = async () => {
++  let anchorId = null;
++  const keepAnchor = async () => {
+     const pages = ((await httpJson(debug, '/json/list', 3000)) ?? []).filter((target) => target.type === 'page');
++    if (pages.some((page) => page.id === anchorId)) return pages;
++    const blank = pages.find((page) => page.url === 'about:blank');
++    anchorId = blank ? blank.id : ((await httpPut(debug, '/json/new?about:blank', 3000))?.id ?? null);
++    return pages;
++  };
++
++  const closeBlankTabs = async () => {
++    const pages = await keepAnchor();
+     const blank = pages.filter((page) => page.url === 'about:blank');
+     const now = Date.now();
+     for (const id of [...blankSince.keys()]) {
+@@ -818,7 +850,7 @@ function runGate({ gate, debug }) {
+     }
+     if (pages.length > blank.length && blank.length > 0) {
+       for (const page of blank) {
+-        if (now - blankSince.get(page.id) >= BLANK_GRACE_MS) await httpGet(debug, `/json/close/${page.id}`, 3000);
++        if (page.id !== anchorId && now - blankSince.get(page.id) >= BLANK_GRACE_MS) await httpGet(debug, `/json/close/${page.id}`, 3000);
+       }
+     }
+   };
