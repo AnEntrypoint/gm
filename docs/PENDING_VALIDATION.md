@@ -6338,3 +6338,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: native/components/tool/driver.cpp. The check home is now an empty temp directory, and run() runs gm install --local of this build into it before any check; a failed install is a failure. check-worker-growth joins kExclusive.
 - Witness: the ship Phase B on the commit that carries this item (every check of the 169 run, 0 failed).
 - Red: none in a window; the failing checks themselves are the evidence (ship-5643.result).
+
+### 85. Parity keeps HOME=/config: the probe's spawn row expects the real home (Phase A, not run)
+
+- Found by the witnesses3 part of rc37 on ab08a62f (ledger 84 reverted): parity-body row child-process.spawn without env inherits HOME expects /config and got the window home. The override is what the row checks, so it stays.
+- Change: window.sh restores HOME=/config for rpc-until.py (ledger 84 reverted by the revert commit that carries this item).
+- Witness: witnesses3 on that commit prints PARITY_OK.
+- Red: none.
