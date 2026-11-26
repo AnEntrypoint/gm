@@ -147,6 +147,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher starts a browser only after a closing one has exited, and reports ready only for one that stays up", "bin/playwriter-project", "START_ATTEMPTS"},
     {"launcher moves a browser or gate log past its size limit to .1", "bin/playwriter-project", "rotateLog"},
     {"launcher keeps a running browser when a caller computes another browser fingerprint", "bin/playwriter-project", "fingerprintNote"},
+    {"launcher logs an adopted browser whose fingerprint differs, for any recorded or unrecorded browser", "bin/playwriter-project", "an unrecorded browser"},
 };
 
 std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {
