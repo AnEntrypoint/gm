@@ -96,7 +96,7 @@ if [ "${PART:-all}" = all ] || [[ "${PART:-all}" == witnesses* ]]; then
   if [ "${PART:-all}" = all ] || [ "$PART" = "witnesses$WITNESS_PARTS" ]; then
     mkdir -p "$OUT/parity/ws"
     guard "before parity"
-    timeout 900 python3 $PB/rpc-until.py "$GM" "$OUT/parity/ws" $PB/parity-body.js "$OUT/parity/out.txt" > "$OUT/parity/probe.txt" 2>&1
+    HOME=/config timeout 900 python3 $PB/rpc-until.py "$GM" "$OUT/parity/ws" $PB/parity-body.js "$OUT/parity/out.txt" > "$OUT/parity/probe.txt" 2>&1
     say "PARITY_RC=$?"
     guard "after parity"
     python3 -I $PB/parity-verdict.py "$OUT/parity/out.txt" && say "PARITY_OK" || { FAILED=1; say "PARITY_FAILED"; }
