@@ -6331,3 +6331,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: skills/gm/SKILL.md, Time section, one bullet named Gate in general terms.
 - Witness: skill://gm/SKILL.md served by gm.read_file on the commit that carries this item contains the Gate bullet.
 - Red: none; a skill is read on the next call and carries no check of its own.
+
+### 83. The check home gets this build's launcher by install, and check-worker-growth runs exclusive (Phase A, not run)
+
+- Found by the ship Phase B of 5643f982 (ship-5643.result): check-browser-first-open, check-browser-start-closing, check-browser-log-bounds and check-browser-last-window failed because the check home held the launcher copied from the real HOME, which predates the launcher changes this build installs; the window installs this build into its home first, the ship did not. check-worker-growth (2224 KB over the 2048 KB limit) measures worker memory under pool load.
+- Change: native/components/tool/driver.cpp. The check home is now an empty temp directory, and run() runs gm install --local of this build into it before any check; a failed install is a failure. check-worker-growth joins kExclusive.
+- Witness: the ship Phase B on the commit that carries this item (every check of the 169 run, 0 failed).
+- Red: none in a window; the failing checks themselves are the evidence (ship-5643.result).

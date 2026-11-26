@@ -25,7 +25,7 @@ namespace {
 
 constexpr std::uint64_t kCheckTimeoutMs = 600000;
 constexpr const char* kMutations = "clock-mutations";
-const std::set<std::string> kExclusive{"check-relay-reexec", "check-browser-scope", "check-lazy-browser", "check-browser-first-open", "check-browser-tabs-owner", "check-browser-idle-default", "check-browser-blank-grace", "check-browser-feedback", "check-browser-first-connect", "check-browser-start-reason", "check-browser-second-gate", "check-browser-ws-address", "check-gate-handoff", "check-browser-profile-cache", "check-browser-keeps-pages", "check-browser-session-restore", "check-browser-start-closing", "check-browser-log-bounds", "check-browser-fingerprint-mismatch", "check-browser-last-window", "check-browser-idle-handover"};
+const std::set<std::string> kExclusive{"check-relay-reexec", "check-worker-growth","check-browser-scope", "check-lazy-browser", "check-browser-first-open", "check-browser-tabs-owner", "check-browser-idle-default", "check-browser-blank-grace", "check-browser-feedback", "check-browser-first-connect", "check-browser-start-reason", "check-browser-second-gate", "check-browser-ws-address", "check-gate-handoff", "check-browser-profile-cache", "check-browser-keeps-pages", "check-browser-session-restore", "check-browser-start-closing", "check-browser-log-bounds", "check-browser-fingerprint-mismatch", "check-browser-last-window", "check-browser-idle-handover"};
 
 using Clock = std::chrono::steady_clock;
 
@@ -33,9 +33,7 @@ struct CheckHome {
     CheckHome() {
         std::error_code ec;
         path_ = fs::temp_directory_path(ec) / ("pbh-" + std::to_string(::getpid()));
-        const char* real = std::getenv("HOME");
-        fs::create_directories(path_ / ".gmnew", ec);
-        fs::copy(fs::path(real != nullptr ? real : "") / ".gmnew" / "pw", path_ / ".gmnew" / "pw", fs::copy_options::recursive, ec);
+        fs::create_directories(path_, ec);
     }
     ~CheckHome() {
         std::error_code ec;
@@ -205,6 +203,11 @@ public:
         fs::create_directories(logs_, ec);
         CheckHome home;
         check_home_ = home.path();
+        const auto installed = proc::run({"env", "HOME=" + check_home_.string(), gm_, "install", "--local", build_.string(), "--source", root_.string()}, root_, {}, kCheckTimeoutMs);
+        if (!installed.started || installed.exit_code != 0 || installed.timed_out) {
+            failures_.push_back("install");
+            say("phase-b: install of this build into the check home failed: " + installed.err.substr(0, 400));
+        }
         cache_ = read_pairs(cache_path_);
         for (const auto& [name, value] : read_pairs(durations_path_)) durations_[name] = std::atof(value.c_str());
         const char* jobs_env = std::getenv("GM_CHECK_JOBS");
