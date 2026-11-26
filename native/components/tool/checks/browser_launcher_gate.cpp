@@ -433,6 +433,28 @@ CheckResult check_browser_start_closing(const std::string&) {
     return result;
 }
 
+CheckResult check_browser_log_bounds(const std::string&) {
+    const std::string big(3 * 1048576, 'x');
+    const auto seed = [&big](const fs::path& workspace) {
+        fs::create_directories(workspace / ".playwriter");
+        std::ofstream(workspace / ".playwriter" / "browser.log") << big;
+        std::ofstream(workspace / ".playwriter" / "gate.log") << big;
+    };
+    CheckResult result = with_started_gate("log-bounds", {"PLAYWRITER_LOG_LIMIT_MB=1"}, [](const StartedGate&, const Context& context, CheckResult& inner) {
+        const fs::path state = context.workspace / ".playwriter";
+        for (const char* name : {"browser.log", "gate.log"}) {
+            std::error_code live_ec;
+            std::error_code old_ec;
+            const auto live = fs::file_size(state / name, live_ec);
+            const auto old = fs::file_size(state / (std::string(name) + ".1"), old_ec);
+            if (old_ec || old < 3 * 1048576) inner.failures.push_back(std::string(name) + " past its limit was not kept as " + name + ".1 (the 3 MB seed was not moved)");
+            if (live_ec || live >= 1048576) inner.failures.push_back(std::string(name) + " is " + std::to_string(live) + " bytes after a start with a 1 MB limit");
+        }
+    }, seed);
+    if (result.failures.empty()) result.summary = "a browser log and a gate log past PLAYWRITER_LOG_LIMIT_MB (1 MB here) move to .1 when a gate or a browser starts, so each keeps at most two sizes";
+    return result;
+}
+
 CheckResult check_browser_session_restore(const std::string&) {
     const auto run_case = [](const std::string& label, const std::string& restore, const std::string& expected) {
         return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, expected](const StartedGate& gate, const Context& context, CheckResult& inner) {
@@ -494,6 +516,12 @@ CheckResult check_browser_keeps_pages(const std::string&) {
 }
 
 CheckResult check_browser_start_closing(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_log_bounds(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

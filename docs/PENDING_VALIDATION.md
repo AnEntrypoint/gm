@@ -6234,3 +6234,13 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Cost: a start that finds the browser running takes 2 s longer (the settle). Calls that do not start a browser are unchanged.
 - Not proven: the four browsers of the 25 November docstudio log that died with ECONNREFUSED 30 to 170 s after their start. A close by an external Browser.close, as a body's browser.close() on connectOverCDP would send, is the same mechanism, but the gate's own stop is not affected.
 - Install hook: "launcher starts a browser only after a closing one has exited, and reports ready only for one that stays up" (START_ATTEMPTS) and the same needle in the fake git of checks/support.hpp.
+
+### Ranked item 5, the rest of it: browser.log and gate.log are bounded (Phase A, not pushed)
+
+- Red first: check-browser-log-bounds seeds 3 MB into browser.log and gate.log, sets PLAYWRITER_LOG_LIMIT_MB=1 and starts a gate. On the installed launcher (no rotation) it fails 4 assertions: neither log moved to .1, and both stayed at 3.1 MB.
+- Change: defaults/playwriter/launcher-zz-log-bounds.diff adds rotateLog(file), which renames a log past the limit to file.1 (replacing the old .1). runGate rotates browser.log at gate start, and ensureGate rotates gate.log before it spawns a gate. So each log keeps at most two sizes.
+- Green: check-browser-log-bounds ok (4.2 s) on the final launcher order (verified: the full sorted chain of defaults/playwriter reproduces the tested file). Also green on the same file: check-browser-start-closing, check-browser-session-restore.
+- Limit of the change: a browser that is restarted inside one gate's life does not rotate browser.log again until that gate restarts. The docstudio log grows about 230 KB a day, so a gate's life stays well under the 5 MB limit.
+- Diff placement: the first attempt put the rotation call in startChrome and in front of the browser log append; the restore diff's context is on those lines, so the diff failed to apply after it (verified by applying the full sorted order). The call now sits at the start of runGate, which no other diff touches.
+- Hook: "launcher moves a browser or gate log past its size limit to .1" (rotateLog() in install.cpp) and the fake-git needle 'rotateLog'.
+- Still open: the four browsers of 25 November. Their browser.log has no shutdown line before the death (the log ends at the last DBus error, 10:22:04 for pid 2327899, while the gate logged the probe failure at 10:22:08), and the gate has no stop line, so the death came from outside the gate (a graceful Browser.close or a signal). The executor code in the installed playwriter has no Browser.close call of its own; the caller that closed it is not identified.

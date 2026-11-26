@@ -1,0 +1,33 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index d243cab..615fc5e 100644
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -89,6 +89,12 @@ const STATE = path.join(PROJECT, '.playwriter');
+ const PROFILE = path.join(STATE, 'browser-profile');
+ const GATE_LOG = path.join(STATE, 'gate.log');
+ const BROWSER_LOG = path.join(STATE, 'browser.log');
++const LOG_LIMIT_BYTES = (Number(process.env.PLAYWRITER_LOG_LIMIT_MB) || 5) * 1048576;
++function rotateLog(file) {
++  try {
++    if (fs.statSync(file).size > LOG_LIMIT_BYTES) fs.renameSync(file, `${file}.1`);
++  } catch {}
++}
+ const LINUX_BROWSERS = ['/opt/google/chrome/chrome', '/usr/lib/chromium/chromium.real'];
+ const BROWSER_PID = path.join(STATE, 'browser.pid');
+ const BROWSER_FINGERPRINT = path.join(STATE, 'browser.fingerprint');
+@@ -397,6 +403,7 @@ function seedLabs(profile, labs) {
+ }
+ 
+ function runGate({ gate, debug }) {
++  rotateLog(BROWSER_LOG);
+   const leaseHolders = new Map();
+   let leaseSeq = 0;
+   let lastActivity = Date.now();
+@@ -909,6 +916,7 @@ async function ensureGate(port) {
+     if (ping.project !== PROJECT) throw new Error(`port ${port} is the gate for ${ping.project}, not ${PROJECT}. Delete ${path.join(STATE, 'port')} to pick a new port.`);
+     if (!(await handedOver(port, ping))) return;
+   }
++  rotateLog(GATE_LOG);
+   const out = fs.openSync(GATE_LOG, 'a');
+   const gate = spawn(process.execPath, [__filename, '--gate'], {
+     cwd: PROJECT,
