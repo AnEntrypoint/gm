@@ -97,14 +97,13 @@ if part_is witnesses; then
   python3 -I $PB/parity-verdict.py "$OUT/parity/out.txt" && say "PARITY_OK" || { FAILED=1; say "PARITY_FAILED"; }
 fi
 
-if part_is reds1 || part_is reds2 || [ "${PART:-all}" = all ]; then
-  ids=$(python3 $PB/red.py ids)
-  half=$(( ($(echo $ids | wc -w) + 1) / 2 ))
-  case "${PART:-all}" in
-    reds1) ids=$(echo $ids | tr ' ' '\n' | head -n "$half");;
-    reds2) ids=$(echo $ids | tr ' ' '\n' | tail -n +$((half + 1)));;
-  esac
-  say "REDS"
+REDS_PARTS=${REDS_PARTS:-4}
+if [ "${PART:-all}" = all ] || [[ "${PART:-all}" == reds[0-9]* ]]; then
+  ids=$(python3 $PB/red.py ids | tr ' ' '\n' | grep .)
+  if [ "${PART:-all}" != all ]; then
+    ids=$(echo "$ids" | awk -v k="${PART#reds}" -v n="$REDS_PARTS" '{ a[NR] = $0 } END { s = int((NR + n - 1) / n); for (i = (k - 1) * s + 1; i <= k * s && i <= NR; i++) print a[i] }')
+  fi
+  say "REDS ${PART:-all}: $(echo $ids | wc -w) reds: $(echo $ids)"
   for id in $ids; do
     RED_LOGS=$OUT/reds step "red-$id" python3 $PB/red.py "$id" || { FAILED=1; say "FAILED red-$id"; }
   done

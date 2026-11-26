@@ -6303,3 +6303,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: native/components/tool/driver.cpp. CheckHome makes a temp home under the temp directory (TMPDIR) and copies HOME/.gmnew/pw into it. Every check runs with HOME set to that home, and the home is removed when the run ends. A symlink to the live launcher was tried and rejected: the checks would write into the install that other projects use.
 - Witness: the ship Phase B on the commit that carries this item (163 checks, 0 failed, pass line naming the tree).
 - Red: not a window red. The red evidence is the measured failure under the shared HOME: three of three ship runs of 557d1fc8 and the direct HOME=/config run.
+
+### 79. The reds run in four parts, so no window part passes 30 minutes (Phase A, not run)
+
+- Found by queue item 1: in phase-rc30 reds1 ran 55 min and reds2 ran 49 min in the gate, over the 30-minute part limit. witnesses ran 19 min.
+- Change: tools/phase-b/window.sh selects reds part k of REDS_PARTS (default 4) as an equal contiguous range of the red ids. tools/phase-b/parts.sh queues build, witnesses, reds1, reds2, reds3 and reds4 as separate gate tickets.
+- Witness: each reds part prints REDS reds<k>: <count> reds: <ids> in window.txt. The four counts add to the total of 27 reds, and the last part holds the remainder.
+- Red: none. The split changes which reds a part runs, not any red mutation or check.
