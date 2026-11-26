@@ -294,8 +294,9 @@ int ship_push(const fs::path& root) {
         std::printf("refused: origin main moved during Phase B; HEAD %s is not on top of it; nothing pushed, nothing forced\n", commit.c_str());
         return 1;
     }
-    if (!git_output(root, {"push", "-q", "origin", "main"})) {
-        std::puts("refused: git push failed; nothing was forced");
+    const auto pushed = run_in(root, {"env", "GM_TOOL=" + proc::current_executable().string(), "git", "push", "-q", "origin", "main"});
+    if (!succeeded(pushed)) {
+        std::printf("refused: git push failed; nothing was forced\n%s", pushed.err.substr(0, 400).c_str());
         return 1;
     }
     std::printf("PUSHED %s\n", commit.c_str());

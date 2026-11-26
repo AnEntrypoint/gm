@@ -6310,3 +6310,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: tools/phase-b/window.sh selects reds part k of REDS_PARTS (default 4) as an equal contiguous range of the red ids. tools/phase-b/parts.sh queues build, witnesses, reds1, reds2, reds3 and reds4 as separate gate tickets.
 - Witness: each reds part prints REDS reds<k>: <count> reds: <ids> in window.txt. The four counts add to the total of 27 reds, and the last part holds the remainder.
 - Red: none. The split changes which reds a part runs, not any red mutation or check.
+
+### 80. gm-tool ship pushes with the binary that ran Phase B, not the stale build/release tool (Phase A, not run)
+
+- Found when the push of 557d1fc8 was refused by the global pre-push hook. The hook runs build/release/native/components/tool/gm-tool, a 25 Nov binary without the pre-push command, so git refused the push until GM_TOOL pointed at the rebuilt window tool.
+- Change: native/components/tool/ship_push.cpp pushes through env GM_TOOL=<this executable> git push, so the hook runs the binary that gated the push, and a failed push prints git error text. current_executable moves from native/components/host/child.cpp into gm::proc (native/components/proc/executable.cpp, declared in native/include/gm/proc.hpp). host/include/gm/host/child.hpp re-exports it with a using-declaration, and gm_host drops child.cpp.
+- Witness: the ship push on the commit that carries this item prints PUSHED, and git ls-remote origin main shows that commit.
+- Red: none.

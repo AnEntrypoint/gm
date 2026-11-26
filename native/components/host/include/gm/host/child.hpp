@@ -8,6 +8,6 @@ namespace gm::host {
 
 using Child = proc::Child;
 
-std::filesystem::path current_executable();
+using proc::current_executable;
 
 }

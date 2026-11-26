@@ -1,4 +1,4 @@
-#include "gm/host/child.hpp"
+#include "gm/proc.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -11,7 +11,7 @@
 #endif
 #endif
 
-namespace gm::host {
+namespace gm::proc {
 
 std::filesystem::path current_executable() {
 #if defined(_WIN32)

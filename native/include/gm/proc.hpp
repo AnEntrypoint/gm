@@ -43,6 +43,8 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd = {}, s
 
 const char* signal_name(int signal_number);
 
+std::filesystem::path current_executable();
+
 struct ProcessRow {
     long long pid = 0;
     long long parent = 0;
