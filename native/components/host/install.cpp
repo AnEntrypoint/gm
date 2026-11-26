@@ -144,6 +144,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher keeps the browser profile's caches under a limit", "bin/playwriter-project", "trimProfileCaches"},
     {"launcher keeps a browser that does not answer while it is alive", "bin/playwriter-project", "listed === null"},
     {"launcher restores the last session when PLAYWRITER_RESTORE_SESSION is 1", "bin/playwriter-project", "PLAYWRITER_RESTORE_SESSION"},
+    {"launcher starts a browser only after a closing one has exited, and reports ready only for one that stays up", "bin/playwriter-project", "START_ATTEMPTS"},
 };
 
 std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {

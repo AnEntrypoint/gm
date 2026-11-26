@@ -352,6 +352,13 @@ const char* const kCdpScript =
     "  ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && pending.has(d.id)) { pending.get(d.id)(d); pending.delete(d.id); } };"
     "  await new Promise((r) => { ws.onopen = r; });"
     "  const call = (method, params) => new Promise((r) => { const n = ++id; pending.set(n, r); ws.send(JSON.stringify({ id: n, method, params })); });"
+    "  if (mode === 'hold') {"
+    "    const pid = Number(process.argv[3]);"
+    "    ws.send(JSON.stringify({ id: ++id, method: 'Browser.close' }));"
+    "    process.kill(pid, 'SIGSTOP');"
+    "    let alive = true; try { process.kill(pid, 0); } catch { alive = false; }"
+    "    console.log('held ' + alive); process.exit(0);"
+    "  }"
     "  if (mode === 'set') {"
     "    await call('Storage.setCookies', { cookies: [{ name: 'persistent', value: 'p', url: 'http://127.0.0.1/', expires: Math.floor(Date.now() / 1000) + 86400 }, { name: 'sess', value: 's', url: 'http://127.0.0.1/' }] });"
     "    await get('/json/new?http://127.0.0.1:' + port + '/json/version', 'PUT');"
@@ -362,8 +369,10 @@ const char* const kCdpScript =
     "  process.exit(0);"
     "})().catch((e) => { console.log('error ' + e.message); process.exit(1); });";
 
-std::string cdp(const Context& context, const std::string& mode) {
-    const auto reply = proc::run({"node", "-e", kCdpScript, debug_port_of(context), mode}, context.workspace, {}, 60000);
+std::string cdp(const Context& context, const std::string& mode, const std::string& extra = {}) {
+    std::vector<std::string> argv{"node", "-e", kCdpScript, debug_port_of(context), mode};
+    if (!extra.empty()) argv.push_back(extra);
+    const auto reply = proc::run(argv, context.workspace, {}, 60000);
     return reply.out + reply.err;
 }
 
@@ -401,6 +410,26 @@ CheckResult check_browser_keeps_pages(const std::string&) {
     });
     for (const std::string& failure : idle.failures) result.failures.push_back(failure);
     if (result.failures.empty()) result.summary = "a browser with an open page and no lease survives 20 s in which it does not answer (SIGSTOP), grace period included, with its page; the idle timeout (8 s here) still stops a browser with an open page";
+    return result;
+}
+
+CheckResult check_browser_start_closing(const std::string&) {
+    CheckResult result = with_started_gate("start-closing", {}, [](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        const std::string held = cdp(context, "hold", std::to_string(gate.browser_pid));
+        if (held.find("held true") == std::string::npos) {
+            inner.failures.push_back("the browser was not caught alive after Browser.close, so the start was not tested: " + support::tail_of(held, 200));
+            return;
+        }
+        std::thread resume([pid = gate.browser_pid] {
+            std::this_thread::sleep_for(std::chrono::seconds(3));
+            ::kill(static_cast<pid_t>(pid), SIGCONT);
+        });
+        const auto restarted = context.run("start", 120000);
+        resume.join();
+        if (restarted.exit_code != 0 || restarted.err.find("browser ready") == std::string::npos) inner.failures.push_back("start while the closing browser was still exiting did not report a ready browser: " + restarted.err.substr(0, 300));
+        if (cdp(context, "get").find("cookies ") == std::string::npos) inner.failures.push_back("the browser started after a closing one does not answer the debug port");
+    });
+    if (result.failures.empty()) result.summary = "a start while the browser of the profile is still closing (stopped for 3 s right after Browser.close) waits for the exit and then reports ready only for a browser that answers";
     return result;
 }
 
@@ -459,6 +488,12 @@ CheckResult check_browser_profile_cache(const std::string&) {
 }
 
 CheckResult check_browser_keeps_pages(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_start_closing(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

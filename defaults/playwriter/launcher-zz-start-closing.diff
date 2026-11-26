@@ -1,0 +1,53 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index 107090c..90ef64f 100644
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -22,6 +22,8 @@ const PLAYWRITER_BIN = path.join(PLAYWRITER_DIR, 'bin.js');
+ const HOST = '127.0.0.1';
+ const IDLE_MS = Number(process.env.PLAYWRITER_IDLE_MS) || 300000;
+ const GRACE_MS = 5000;
++const SETTLE_MS = 2000;
++const START_ATTEMPTS = 3;
+ const LAUNCHER_BUILD = crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex').slice(0, 12);
+ const BLANK_GRACE_MS = 20000;
+ const blankSince = new Map();
+@@ -463,8 +465,10 @@ function runGate({ gate, debug }) {
+     const owner = liveProfileOwner();
+     if (owner) {
+       log(`start deferred: profile lock held by live pid ${owner}`);
+-      if (await waitFor(probe, 30000)) return adopt(false);
+-      throw new Error(`profile ${PROFILE} is held by live pid ${owner}, which does not answer on port ${debug}; not starting another browser`);
++      if (!(await waitFor(async () => (await probe()) || liveProfileOwner() === null, 30000))) {
++        throw new Error(`profile ${PROFILE} is held by live pid ${liveProfileOwner() ?? owner}, which does not answer on port ${debug}; not starting another browser`);
++      }
++      if (await probe()) return adopt(false);
+     }
+     trimProfileCaches(log);
+     if (process.env.PLAYWRITER_WEBGPU === '1') seedLabs(PROFILE, WEBGPU_LABS);
+@@ -972,6 +976,17 @@ function startReason(message) {
+   return text.slice(0, START_REASON_HEAD_CHARS) + ' ... ' + text.slice(-(START_REASON_CHARS - START_REASON_HEAD_CHARS));
+ }
+ 
++async function startedBrowser(gatePort) {
++  let answer = { status: 0 };
++  for (let attempt = 0; attempt < START_ATTEMPTS; attempt++) {
++    answer = await httpGet(gatePort, '/json/version', START_DEADLINE_MS);
++    if (answer.status !== 200) return answer;
++    await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
++    if ((await httpGet(gatePort, '/json/version', START_DEADLINE_MS)).status === 200) return answer;
++  }
++  return { status: 0, error: `the browser stopped answering again within ${SETTLE_MS} ms of each start` };
++}
++
+ function gateHeader(status) {
+   const { browser: b, gate, debugPort, leases } = status;
+   const adopted = b.adopted ? `, ADOPTED: ${b.warning}` : '';
+@@ -1338,7 +1353,7 @@ async function main(argv) {
+ 
+   if (argv[0] === 'start') {
+     const from = fs.existsSync(GATE_LOG) ? fs.statSync(GATE_LOG).size : 0;
+-    const answer = await httpGet(ports.gate, '/json/version', START_DEADLINE_MS);
++    const answer = await startedBrowser(ports.gate);
+     const timedOut = answer.error?.startsWith('timeout') === true;
+     const outcome = answer.status === 200
+       ? { ready: true }
