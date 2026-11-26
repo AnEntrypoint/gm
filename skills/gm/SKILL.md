@@ -5,68 +5,43 @@ description: Runs a long task as a gm worker. A run starts with next_context, do
 
 # gm loop
 
-A multi-step change is built as one batch: all the steps first, then one witness pass over all of them. Each witness goes in the run log.
-
 Three tools are served: next_context, run_code and finish. The work is done in run_code, and finish ends the run with a witness.
 
-This skill is not in the host Skill tool. Read it with ReadMcpResourceTool (server gm, uri `skill://gm/SKILL.md`), or run the gm prompt (mcp__gm__gm). A host with no resource tool reads it in band once, as the first verb of its first run_code body: `await gm.read_file({ path: 'skill://gm/SKILL.md' })` serves the same text and clears the gate for the whole connection. Later run_code bodies on that connection do not repeat the read. Read it first in every session, and again after a compaction.
+This skill is not in the host Skill tool. Read it once per connection: with ReadMcpResourceTool (server gm, uri `skill://gm/SKILL.md`), with the gm prompt (mcp__gm__gm), or in band as the first verb of the first run_code body, `await gm.read_file({ path: 'skill://gm/SKILL.md' })`, which also clears the gate for the connection. Read it again only after a compaction or a rules notice.
 
 ## Phases
 
 The first line of a task names its phase.
 
-- Phase A: make the changes and commit each one locally as it is made, as lanmower, with no trailers and no push, so a stop loses nothing (measured: a peer stopped and left 123 files uncommitted). For each change, add a line to docs/PENDING_VALIDATION.md naming the file, the row and the witness it needs. Build, test, gate and browser steps wait for Phase B. Finish with a witness that lists the commits and the pending lines.
-- Phase B: run each witness recorded for this peer in docs/PENDING_VALIDATION.md, read its output, fix what fails, and rerun only what failed. Push once every witness is green. A peer's Phase B covers only its own lines, and it does not wait on other peers. Then install the build that was just validated: `build/release/native/components/host/gm install --local build/release --source .` on it, and check the install with `build/release/native/components/tool/gm-tool installed`, which fails on a stale install. The install is the last step of Phase B, so the dispatcher does not need a turn to install a pushed build. The stamp hashes the whole tree the build compiled, so every commit changes it, docs-only ones too: build again after the last commit.
+- Phase A: make every change and commit each one locally as it is made, with no push, so a stop loses nothing. For each change, add a line to docs/PENDING_VALIDATION.md naming the file, the row and the witness it needs. Build, test, gate and browser steps wait for Phase B. Finish with a witness that lists the commits and the pending lines.
+- Phase B: run each witness recorded for this peer in docs/PENDING_VALIDATION.md, fix what fails, rerun only what failed, and push as soon as they are green. Cover only your own lines and do not wait on other peers. Then install or deploy as the project's own instructions say, and check that what now runs is the build you validated.
+
+## Time
+
+Anything that waits, repeats or blocks is a defect, whatever the work. Each rule is stated once.
+
+- **Do each thing once.** Build, check, read or edit once per pass, after its inputs are final. Do not fetch a result that is already in context. A result holds only for the tree it ran on: a check that passed on a tree is not run again on that tree, and a job overtaken by an edit is stopped and started once on the final tree.
+- **Batch.** One run_code body per step: read the inputs together, decide in code, write together, run the check, and return counts, paths and failures. Each call is a model turn. A second body is right only when the next action needs a judgment that code cannot make. A multi-step change is built whole and witnessed in one pass.
+- **Wait in one call, in the turn that started the work.** Start anything that may run long with gm.job_start and a timeoutMs that fits, never a shell `&`. Wait with one gm.job_status({ job, waitMs, tail }), or gm.job_status({ pid, waitMs }) for a process gm did not start. For a longer wait, loop inside one body: `for (;;) { const r = await gm.job_status({ pid, waitMs: 60000 }); if (r.state !== 'running') return r.state; }`. Never sleep, never poll with zero-wait calls, and never arm a watcher: each empty answer is a turn, and a turn that ends on a running job leaves its wait to the next prompt.
+- **Work while you wait.** Do every reachable item that the running job does not test. A measurement whose data does not exist yet is taken last, or reported open with the time it becomes possible.
+- **Keep going until nothing reachable is left.** Build a reachable item in the pass that ranks it. An idle loop tick ends the tick, not the run. A run that ends early names what stopped it. A usage or credit limit is a block to report, not a finish.
+- **Use the smallest proof.** Reproduce a failure live and read its output before running any test. Prove a change with the narrowest check that can fail for it, rerun a failing row alone, and run the full set once before a push.
+- **Reuse before you build.** A published artifact, a cache or an earlier result that answers the question replaces a build. One build serves a series: switch behaviour at run time, not by rebuilding.
+- **Carry little.** Read a range with gm.read_file (offset and limit), not a whole file through the shell. Bound every read to the summary and the failing rows, and return from a body only what the next decision needs. Change a file with gm.edit_file; a whole-file write spends the whole file and overwrites an edit made meanwhile. A result over 12000 characters comes back cut, with outputPath holding the rest; full: true returns all of it.
+- **Do not pay for retries.** Text that holds backticks or ${ goes in run_code's data argument and is read as data.<name>. Shell text with quotes, pipes or sed expressions goes in a script file written with gm.write_file. Inline quoting that fails costs a turn for each try.
+- **Measure the loop.** Know the project's cold build, warm build, one-edit-to-test and pre-push times, keep each build's and check's wall time in a ledger, and shorten the largest first. An edit that costs about a cold build means the incremental path is broken. Examine a slow check's scenario before its code. Name the longest step in each report, and what was done about it.
+- **Do not fight for the machine.** One heavy job per worker at a time; check free memory and swap before parallel heavy work. A load-sensitive check gets a budget that does not depend on load, or runs elsewhere; one that fails only under load is a load defect. Suspect the sampler before the code. Prune caches untouched for two days.
+- **Report held work once.** Work that waits on a person, a credential or a host is held: give its cause once, then one line.
+- **Turn each loss into a rule.** When time is lost, write the fix into this section in general terms, naming no project, host or date.
 
 ## Habits
 
-Each habit is stated once, with its reason.
-
-- **Do each thing once.** Build, check, read a state or edit a file once per pass, after its inputs are final. A check run between two edits is paid again, and a read taken before an edit is stale after it. A result already in context is not fetched again.
-- **Batch a step into one body.** Read the inputs together, decide in code, make the writes together, run the check, and return counts, paths and failures. Every run_code call is a model turn, so one verb per call multiplies the turns. A second body is right only when the next action needs a judgment that code cannot make.
-- **Let a job run, and be told when it ends.** Shell commands in gm.run_shell run until they finish unless timeoutMs is given; start a command that may run long as a job, with a timeoutMs that fits it. Wait for it with one gm.job_status({ job, waitMs, tail }), sized from the wall time its witness recorded. When the wait may be longer than one call holds, loop the waits inside one run_code body until the state is not running, so the whole wait is one turn. Never sleep and poll, because each poll is a turn.
-- **Pass text that holds backticks or ${ as data.** A script, a template or a shell line with backticks or ${ written into the body is parsed as JavaScript, so the body fails to load or reads a name that is not defined. Put that text in run_code's data argument, any JSON value, and read it in the body as data.<name>.
-- **Keep what you carry small.** Inside run_code, a gm.read_file or gm.run_shell result over 12000 characters comes back as its first 4500 and last 1500 characters, with outputPath holding the whole text; full: true asks for all of it only when the result is over 12000 characters, and changes nothing when it fits, so do not pass it on a small file; a repeat read with no write between gets a pointer to its earlier step, which fresh: true overrides. Read a file with gm.read_file and a range (offset and limit), not cat or sed through gm.run_shell. Return from a body only what the next decision needs. Change an existing file with gm.edit_file: a whole-file write spends the tokens of the whole file, and it overwrites an edit made in the meantime.
-- **Work through gm.** Shell and file work go through the verbs inside run_code, not the host's Bash, so the output is condensed, the steps batch, and each step lands in the run log. Create, copy, move and delete paths with gm.fs_op; a file operation beyond that is a script that gm.run_shell starts with node.
-- **Debug live, then test once.** Reproduce the one failing path and read its output before any test. Run tests only for the witnesses in docs/PENDING_VALIDATION.md, once per push.
-- **Push through the project's gate.** `gm.git_push({ gate: '<the project check command>' })` runs the command on the committed tree and pushes main only when it exits 0, so a push cannot go ahead of its checks, and it refuses first with uncommitted tracked changes. Always name the gate: a repo with a pre-push hook (gm's .githooks) refuses an unchecked push of main from any agent.
-- **Stop only what you started.** Stop a process by a PID you read first in the output of ps or pgrep. Never stop a process by a name pattern, because the pattern can match the shell that runs the kill.
-- **Wait in one call, do not poll.** A status you need later (a child run's progress, a job, a next event) is read by one call that holds a wait, not by repeated calls with no wait. A job is waited on with `gm.job_status({ job, waitMs })` in the same turn, and never with a Monitor or any other watcher armed for it. A zero-wait call in a loop costs a model turn each time it answers nothing new. Measured: one child session called child_context 264 times with no wait in run 2026-11-05-19-07-15-bce32b, and next_context was called again and again with no wait across the 444 runs in /workspace/gm/runs.
-- **Do not sleep on data that does not exist yet.** A measurement that needs runs, logs or output not yet written does the other reachable work first and takes the measurement last. If it cannot be taken in this run, report it as open with the time it becomes possible. A turn never ends on a sleep.
-- **Read the served skill once per connection.** Read it again only after a compaction or a rules notice. Measured: one session (7ae15e26) read skill://gm/SKILL.md 13 times, and the run logs hold 157 skill-loaded events across 444 runs. Each read returns the same text, so each repeat spends context for nothing.
-- **Keep the wait in the turn that started the job.** When a job you started can still finish, hold its wait in the same turn and end the turn only when no reachable step is left. Measured in three sessions (526213ff, 179378d2, 7ae15e26): the gap from a turn's end to the next prompt had a median of 117 to 508 seconds and a 90th percentile of 222 to 1588 seconds, those gaps mix the user's time away with the time a job spent running after the turn ended, so the measure cannot split them. A turn that ends while its own job still runs leaves that job's wait to the next prompt.
-- **Put shell text with quotes, pipes or sed expressions in a script file.** Write the script with gm.write_file and start it with gm.run_shell. Inline quoting that fails costs a turn for each try.
-- **Start a build or test that can outlive a turn with gm.job_start, never a shell `&`.** A job records its log, exit code and tail in the run log. A background shell can leave an empty log, and then there is nothing to read.
-- **A job's result is valid only for the tree it started on.** When an edit lands after the job starts, stop the job with gm.job_stop and start one job on the final tree.
-- **A loop tick with nothing to do ends that tick, not the run.** Keep the run's waits open, and handle any pending prompt before a loop is stopped.
-- **Prove a change with the narrowest check that can fail for it.** A failing row is rerun alone. The full set runs once before a push. A check that already passed on a tree is not run again on that tree.
-- **Wait for a started job by its PID, with a bounded timeout, in the same turn.** Never sleep to wait, in a shell call or a body, and never a Monitor: a turn that ends under a Monitor loses its wait (observed on a build-speed bench, 2026-11-17). For a process gm did not start, gm.job_status({ pid, waitMs }) waits on it and returns its state; do other reachable work while it runs. A longer wait is one run_code body with waitMs 60000 per call: `let n = 0; for (;;) { n += 1; const r = await gm.job_status({ pid, waitMs: 60000 }); if (r.state !== 'running') return { calls: n, state: r.state }; }`. A body still running at 100 seconds becomes a background run, and its value comes from `gm.job_status({ job, waitMs })` with the job id the call returned. Measured with waitMs 1000 on a 4 s process: 4 calls, one reply, 4.03 s.
-- **Build a reachable ranked item in the pass that ranks it.** Work that waits on a person, a credential or a host is held, and is reported as held.
-- **Report a held item once, with its cause, then name it in one line.** Later reports name it in one line and do not repeat its cause.
-- **Bound every read of state and output to the summary and the failing rows.** Page the rest only when a decision needs it.
-- **Keep the run going until no reachable row is left.** A run that ends early names the row that stopped it and why. Measured: seven of fx's thirteen turns and six of gm's fourteen ended in under five minutes with work left.
-- **A usage or credit limit is a block, not a finish.** A turn that ends on a limit message is reported as blocked on the owner, with the limit's text, and the reachable rows it left are named.
-- **Measure heavy things off the host, in one run.** Heavy measurement runs off the loaded host, in one run that carries every configuration and prints one result line each. A load-sensitive check uses a budget that does not depend on load. A sampler is suspect before the code: a 50 ms `ps` sampler caused the frame gaps it measured (measured: the host reached load 25 on 12 cores, and one check failed under load and passed alone).
-- **Examine a slow check's scenario before its code.** Measured: two checks went from 88 s to 12.5 s and from 79 s to 4.6 s once the scenario matched the real one, and the code had not changed.
-- **After a reboot, read the saved state and carry on.** A run starts by reading its own saved log and rows, and it continues from the last recorded step; it does not restart the task. Measured: a reboot cut four sessions mid-turn.
-- **A liveness claim is checked by a call that answers.** A pid file alone is not proof that a process is alive, because a reboot reuses pids: a stale pid file made a server look up when it was not. The check is a call to the process, or a pid with its start time, never the pid alone.
-- **An install survives a reboot.** After a reboot, `gm --version` and the served skill must match the checkout's; a mismatch is a stale install and is reported as one.
-- **Name the longest step in each report, and what was done about it.**
-
-## Iteration time
-
-Iteration time is the measure of a run. Each habit is stated once.
-
-- **Measure four times per project:** cold build, warm build, one-file edit-to-test, and the full pre-push time. Shorten the dominant step first and name it in the report.
-- **Test the incremental loop apart from the cold build.** If an edit costs about a cold build, the build is not incremental: test its incremental modes, and check each flag exists first, since a command that exits 1 measures nothing.
-- **Prune caches in the build's own tooling.** Entries untouched for two days go, on every build.
-- **Share heavy builds.** One heavy build per peer at a time. Before parallel work, check free memory and swap, and record load and swap in the report.
-- **Never gate a witness on load.** Give heavy checks a load-independent budget or run them remotely. Record the load on each row; a check that fails only at high load is a load defect.
-- **Stop browsers by PID** when their witness ends; a leaked browser can hold gigabytes.
-- **Wait on a job's PID in one bounded wait.** Never end a turn with a background job unobserved; a build left running is the next turn's first wait.
-- **Push once, after the witnesses.** A push before them is a breach for the owner to review.
-- **Keep a build ledger per project:** the wall time of each build and check, one line each.
-
+- **Work through gm.** Shell and file work go through the verbs inside run_code, not the host's shell, so output is condensed, steps batch, and each step lands in the run log. Create, copy, move and delete paths with gm.fs_op.
+- **Push through the project's gate.** `gm.git_push({ gate: '<the project check command>' })` runs the command on the committed tree and pushes main only when it exits 0. Always name the gate, and push only after the witnesses pass.
+- **Commit under the owner's configured git identity.** No trailers and no tool or model attribution.
+- **Stop only what you started,** by a PID you read first, browsers included, when its witness ends. Never stop by a name pattern: it can match the shell that runs the kill.
+- **After a reboot, read the saved state and carry on** from the last recorded step; do not restart the task. The running version must match the checkout's; a mismatch is a stale install to report.
+- **Check liveness with a call that answers,** or a pid with its start time. A pid file alone goes stale when pids are reused.
 ## Rules
 
 These are the rules of every run. next_context returns them with each step, and this skill holds them word for word, because a skill is re-attached after a compaction.
