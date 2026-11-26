@@ -433,6 +433,41 @@ CheckResult check_browser_start_closing(const std::string&) {
     return result;
 }
 
+CheckResult check_browser_fingerprint_mismatch(const std::string&) {
+    const auto mismatched_start = [](const Context& context) {
+        const fs::path launcher = context.sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project";
+        return proc::run({"env", "HOME=" + context.sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + context.workspace.string(), "PLAYWRITER_TELEMETRY=0", "PLAYWRITER_IDLE_MS=60000", "node", launcher.string(), "start"}, context.workspace, {}, 120000);
+    };
+    CheckResult replaced = with_started_gate("fingerprint-replace", {}, [&mismatched_start](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        cdp(context, "page");
+        const long long gate_started = proc::start_time_of(gate.gate_pid);
+        const auto reply = mismatched_start(context);
+        if (proc::start_time_of(gate.gate_pid) != gate_started) inner.failures.push_back("a start from a caller that computes another browser fingerprint replaced the gate (pid " + std::to_string(gate.gate_pid) + ") that held a browser with a page; gate log: " + support::tail_of(read_text(context.workspace / ".playwriter" / "gate.log"), 400) + " start said: " + support::tail_of(reply.err, 200));
+        if (proc::start_time_of(gate.browser_pid) != gate.browser_started) inner.failures.push_back("the browser (pid " + std::to_string(gate.browser_pid) + ") with a page was stopped by a start whose browser fingerprint differed");
+        if (!page_listed(context)) inner.failures.push_back("the page is gone after a start whose browser fingerprint differed");
+    });
+    CheckResult adopted = with_started_gate("fingerprint-adopt", {}, [&mismatched_start](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        cdp(context, "page");
+        ::kill(static_cast<pid_t>(gate.gate_pid), SIGUSR2);
+        bool handed_over = false;
+        for (int tenth = 0; tenth < 150 && !handed_over; ++tenth) {
+            handed_over = proc::start_time_of(gate.gate_pid) == 0;
+            if (!handed_over) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (!handed_over) {
+            inner.failures.push_back("the gate (pid " + std::to_string(gate.gate_pid) + ") did not exit on SIGUSR2 within 15 s");
+            return;
+        }
+        const auto reply = mismatched_start(context);
+        if (reply.exit_code != 0 || reply.err.find("browser ready") == std::string::npos) inner.failures.push_back("a new gate for a caller whose browser fingerprint differed did not report a ready browser: " + support::tail_of(reply.err, 200));
+        if (proc::start_time_of(gate.browser_pid) != gate.browser_started) inner.failures.push_back("a new gate for a caller whose browser fingerprint differed stopped the adopted browser (pid " + std::to_string(gate.browser_pid) + ") that had a page");
+        if (!page_listed(context)) inner.failures.push_back("the page is gone after a new gate adopted the browser under a different fingerprint");
+    });
+    for (const std::string& failure : adopted.failures) replaced.failures.push_back(failure);
+    if (replaced.failures.empty()) replaced.summary = "a start from a caller whose browser fingerprint differs leaves a gate with a page and its browser running, and an adopting gate keeps a browser with a page";
+    return replaced;
+}
+
 CheckResult check_browser_log_bounds(const std::string&) {
     const std::string big(3 * 1048576, 'x');
     const auto seed = [&big](const fs::path& workspace) {
@@ -516,6 +551,12 @@ CheckResult check_browser_keeps_pages(const std::string&) {
 }
 
 CheckResult check_browser_start_closing(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_fingerprint_mismatch(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

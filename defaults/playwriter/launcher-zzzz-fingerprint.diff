@@ -1,0 +1,125 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index ddf7caa..c6dd02a 100644
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -132,7 +132,25 @@ const gateFailureSince = (from) => {
+   const line = text.split('\n').find((item) => item.includes(marker));
+   return line ? line.slice(line.indexOf(marker) + marker.length) : null;
+ };
+-const browserFingerprint = () => [process.env.PLAYWRITER_BROWSER_PATH || LINUX_BROWSERS.find((candidate) => fs.existsSync(candidate)) || '', process.env.PLAYWRITER_NO_SANDBOX ? 'no-sandbox' : '', process.env.PLAYWRITER_WEBGPU === '1' ? 'webgpu' : ''].join('|');
++const browserBinary = () => {
++  const named = process.env.PLAYWRITER_BROWSER_PATH || LINUX_BROWSERS.find((candidate) => fs.existsSync(candidate));
++  if (named) return named;
++  for (const dir of (process.env.PATH || '').split(path.delimiter).filter(Boolean)) {
++    for (const name of ['chromium', 'chromium-browser', 'google-chrome']) {
++      const file = path.join(dir, name);
++      if (fs.existsSync(file)) return file;
++    }
++  }
++  return '';
++};
++const browserFingerprint = () => {
++  const binary = browserBinary();
++  let identity = binary;
++  try {
++    identity = binary ? fs.realpathSync(binary) : '';
++  } catch {}
++  return [identity, process.env.PLAYWRITER_NO_SANDBOX ? 'no-sandbox' : '', process.env.PLAYWRITER_WEBGPU === '1' ? 'webgpu' : ''].join('|');
++};
+ const isCallerPage = (target) => target.type === 'page' && !target.url.startsWith('about:') && !target.url.startsWith('chrome://') && !target.url.startsWith('devtools://');
+ const playwriterSpawn = (args, options = {}) => spawn(process.execPath, [PLAYWRITER_BIN, ...args], { cwd: PROJECT, ...options });
+ 
+@@ -305,12 +323,6 @@ function pidAlive(pid) {
+   return state !== 'Z' && state !== 'X';
+ }
+ 
+-function isOwnGate(pid, port) {
+-  if (!Number.isInteger(pid) || pid <= 1) return false;
+-  const command = commandOf(pid);
+-  return command.includes(__filename) && command.split(/\s+/).includes('--gate') && listenerPid(port) === pid;
+-}
+-
+ function readRaw(file) {
+   try {
+     return fs.readFileSync(file, 'utf8');
+@@ -475,7 +487,7 @@ function runGate({ gate, debug }) {
+       if (!(await waitFor(async () => (await probe()) || liveProfileOwner() === null, 30000))) {
+         throw new Error(`profile ${PROFILE} is held by live pid ${liveProfileOwner() ?? owner}, which does not answer on port ${debug}; not starting another browser`);
+       }
+-      if (await probe()) return adopt(false);
++      if (await probe()) return adopt();
+     }
+     trimProfileCaches(log);
+     if (process.env.PLAYWRITER_WEBGPU === '1') seedLabs(PROFILE, WEBGPU_LABS);
+@@ -526,28 +538,13 @@ function runGate({ gate, debug }) {
+     throw new Error(`browser did not open debug port ${debug}; see ${BROWSER_LOG}: ${logTail(BROWSER_LOG)}`);
+   };
+ 
+-  const stopAdopted = async (pid) => {
+-    await closeBrowser();
+-    if (!(await waitFor(gone, 10000))) {
+-      signalPid(pid, 'SIGTERM', { log });
+-      await waitFor(gone, 5000);
+-    }
+-    browser = null;
+-    fs.rmSync(BROWSER_PID, { force: true });
+-    fs.rmSync(BROWSER_FINGERPRINT, { force: true });
+-  };
+-
+-  const adopt = async (allowRestart) => {
++  const adopt = async () => {
+     const pid = listenerPid(debug);
+     const recorded = readRecordedPid();
+     const owner = liveProfileOwner();
+     const built = readRaw(BROWSER_FINGERPRINT)?.trim() ?? null;
+     const wanted = browserFingerprint();
+-    if (allowRestart && pid !== null && pid === owner && built !== wanted) {
+-      log(`browser pid ${pid} was started as ${built ?? 'an unrecorded browser'}, not ${wanted}; stopping it to start the configured browser`);
+-      await stopAdopted(pid);
+-      return startChrome();
+-    }
++    if (built !== null && built !== wanted) log(`browser pid ${pid ?? 'unknown'} was started as ${built}; this gate computes ${wanted}; the running browser is kept`);
+     const owned = pid !== null && (pid === recorded || pid === owner);
+     if (owned && pid !== recorded) fs.writeFileSync(BROWSER_PID, `${pid}\n`);
+     const adopted = !owned;
+@@ -563,7 +560,7 @@ function runGate({ gate, debug }) {
+     if (stopping) await stopping;
+     if (chromeUp && await browserAnswers()) return;
+     starting ??= (async () => {
+-      if (await probe()) await adopt(true);
++      if (await probe()) await adopt();
+       else await startChrome();
+       chromeUp = true;
+       missedProbes = 0;
+@@ -1324,20 +1321,11 @@ function proxyMcp(ports, direct) {
+   }
+ }
+ 
+-async function replaceStaleGate(ports) {
++async function fingerprintNote() {
+   const built = readRaw(BROWSER_FINGERPRINT)?.trim() ?? null;
+   const wanted = browserFingerprint();
+   if (built === null || built === wanted) return null;
+-  const status = await httpJson(ports.gate, '/__pwp/status?pages=0', 1000);
+-  if (!status) return null;
+-  if (status.leases > 0) return `the browser was started as ${built}, not ${wanted}; it is not restarted while ${status.leases} other lease(s) hold this project's gate`;
+-  const pid = status.gate?.pid;
+-  if (!isOwnGate(pid, ports.gate)) throw new Error(`the process answering on port ${ports.gate} is not this project's gate (pid ${pid}); it was not signalled and no lease was taken on it`);
+-  signalPid(pid, 'SIGTERM');
+-  if (!(await waitFor(async () => !(await httpOk(ports.gate, '/__pwp/ping', 500)), 15000))) {
+-    throw new Error(`gate ${pid} still answers on port ${ports.gate} 15 s after SIGTERM; no lease was taken on it`);
+-  }
+-  return null;
++  return `the browser was started as ${built}, this caller computes ${wanted}; the running gate and browser are kept`;
+ }
+ 
+ async function main(argv) {
+@@ -1354,7 +1342,7 @@ async function main(argv) {
+   if (argv.length === 0) return proxyMcp(ports, direct);
+ 
+   if (argv[0] === 'start') {
+-    const note = await replaceStaleGate(ports);
++    const note = await fingerprintNote();
+     if (note) console.error(`playwriter-project: ${note}`);
+   }
+   const lease = await acquireLease(ports.gate);
