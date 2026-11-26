@@ -6338,3 +6338,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: native/components/tool/driver.cpp. The check home is now an empty temp directory, and run() runs gm install --local of this build into it before any check; a failed install is a failure. check-worker-growth joins kExclusive.
 - Witness: the ship Phase B on the commit that carries this item (every check of the 169 run, 0 failed).
 - Red: none in a window; the failing checks themselves are the evidence (ship-5643.result).
+
+### 84. The parity probe runs in the window home, not /config (Phase A, not run)
+
+- Found by queue item 2: window.sh ran the parity probe with HOME=/config, so the gm it starts used the live install in /config, not the build the window installed into its home.
+- Change: tools/phase-b/window.sh runs rpc-until.py with the window's HOME (the override is removed; the witnesses part installs this build there first).
+- Witness: witnesses3 of a window on the commit that carries this item prints PARITY_OK, with the probe's gm under the window home.
+- Red: none; the change selects which install the probe uses, not a check.
