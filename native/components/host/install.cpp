@@ -143,7 +143,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher hands an idle gate over to a newer launcher build", "bin/playwriter-project", "/__pwp/handoff"},
     {"launcher keeps the browser profile's caches under a limit", "bin/playwriter-project", "trimProfileCaches"},
     {"launcher keeps a browser that does not answer while it is alive", "bin/playwriter-project", "listed === null"},
-    {"launcher restores the last session when PLAYWRITER_RESTORE_SESSION is 1", "bin/playwriter-project", "PLAYWRITER_RESTORE_SESSION"},
+    {"launcher restores the last session unless PLAYWRITER_RESTORE_SESSION is 0", "bin/playwriter-project", "PLAYWRITER_RESTORE_SESSION !== "},
     {"launcher starts a browser only after a closing one has exited, and reports ready only for one that stays up", "bin/playwriter-project", "START_ATTEMPTS"},
     {"launcher moves a browser or gate log past its size limit to .1", "bin/playwriter-project", "rotateLog"},
     {"launcher keeps a running browser when a caller computes another browser fingerprint", "bin/playwriter-project", "fingerprintNote"},
