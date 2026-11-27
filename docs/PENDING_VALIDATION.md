@@ -6359,3 +6359,4 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: skills/dev/SKILL.md, the post-push bullet, now one detached gate ticket (gm-install) that runs cmake --build build/release, the install of build/release, and gm-tool installed, with GATE_TREE set to HEAD.
 - Witness: the gm-install ticket run after the push of the commit that carries this item ends with check-installed ok (the installed build equals HEAD).
 - Red: none; the change is the documented step, and the witness is the step itself.
+- Corrected by the same step: the ticket script path is /workspace/hyperagent/scripts/gate-ticket.cjs (scripts/ does not exist in this checkout). Witness: the ticket run on c3190a31 ended with check-installed ok (installed build f8e3ac2a38c7-dev, equal to the checkout).
