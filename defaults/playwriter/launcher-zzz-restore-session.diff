@@ -6,7 +6,7 @@ index d243cab..107090c 100755
      if (process.env.PLAYWRITER_WEBGPU !== '1' && !enablesGpu(extra)) args.push('--disable-gpu');
      if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) args.push('--headless=new');
      if (process.env.PLAYWRITER_NO_SANDBOX) args.push('--no-sandbox');
-+    if (process.env.PLAYWRITER_RESTORE_SESSION === '1') args.push('--restore-last-session');
++    if (process.env.PLAYWRITER_RESTORE_SESSION !== '0') args.push('--restore-last-session');
      args.push(...extra, 'about:blank');
      if (extra.length > 0) log(`browser flags applied from ${CHROMIUM_ARGS_VARIABLE}: ${extra.join(' ')}`);
      fs.appendFileSync(BROWSER_LOG, '');

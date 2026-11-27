@@ -6360,3 +6360,13 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Witness: the gm-install ticket run after the push of the commit that carries this item ends with check-installed ok (the installed build equals HEAD).
 - Red: none; the change is the documented step, and the witness is the step itself.
 - Corrected by the same step: the ticket script path is /workspace/hyperagent/scripts/gate-ticket.cjs (scripts/ does not exist in this checkout). Witness: the ticket run on c3190a31 ended with check-installed ok (installed build f8e3ac2a38c7-dev, equal to the checkout).
+
+### Owner item 1: the launcher fixes (gate log, code, Gmail/session check)
+
+- Issue 1 (fixed): the sign-in was lost on each browser start. The session cookies Google sign-in uses (SID, HSID, SAPISID, __Secure-3PSID and the rest of the missing names) have no expiry, so they survive a stop only with --restore-last-session. The owner's browser cmdline has no --restore-last-session (read from /proc/3163989/cmdline). The flag came from PLAYWRITER_RESTORE_SESSION=1, which is set only in gm's defaults/mcp.json envDefaults; docstudio's .mcp.json playwriter entry has no such variable, and Claude Code does not apply envDefaults. The 73 Google cookies that remain are the persistent ones.
+  - Red: check-browser-session-default, installed launcher: "with PLAYWRITER_RESTORE_SESSION unset a session cookie did not survive a stop and start" (12.0 s).
+  - Fix: defaults/playwriter/launcher-zzz-restore-session.diff restores the last session unless PLAYWRITER_RESTORE_SESSION=0. Green: check-browser-session-default ok (12.0 s) and check-browser-session-restore ok (the flag on and off cases) on the fixed launcher in a scratch home.
+  - Not recoverable: the session cookies lost on 26 November stay lost; the owner signs in again once, after which the next restart keeps them.
+- Issue 2 (not fixed, owner config): the docstudio gate's browser lacks PLAYWRITER_BROWSER_PATH and PLAYWRITER_CHROMIUM_ARGS (WebGPU flags) because they sit in envDefaults, which Claude Code ignores; the gate's env (ps 3163952) has neither, and the browser cmdline has --disable-gpu and no WebGPU flags. The fix is for the docstudio .mcp.json to put those keys in its env block; that repo is not this checkout.
+- Issue 3 (not fixed, cosmetic): browser.fingerprint keeps the value written at its start, so each later start by a caller whose fingerprint differs logs a note (fingerprintNote). Nothing is stopped.
+- Issue 4 (fixed earlier, not live on the owner's gate): the 12:05:53 last-page close (keepAnchor, 9eae9a66) and the idle lease (1a290b7a) reach the owner's gate only at its next handover.

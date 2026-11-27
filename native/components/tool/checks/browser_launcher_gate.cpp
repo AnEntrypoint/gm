@@ -632,21 +632,44 @@ CheckResult check_browser_log_bounds(const std::string&) {
     return result;
 }
 
-CheckResult check_browser_session_restore(const std::string&) {
-    const auto names_in = [](const std::string& reply) {
-        std::set<std::string> names;
-        const std::size_t at = reply.find("cookies ");
-        if (at == std::string::npos) return names;
-        std::istringstream line(reply.substr(at + 8));
-        std::string list;
-        std::getline(line, list);
-        std::istringstream items(list);
-        for (std::string name; std::getline(items, name, ',');) {
-            while (!name.empty() && (name.back() == '\r' || name.back() == ' ')) name.pop_back();
-            if (!name.empty()) names.insert(name);
+std::set<std::string> cookie_names_of(const std::string& reply) {
+    std::set<std::string> names;
+    const std::size_t at = reply.find("cookies ");
+    if (at == std::string::npos) return names;
+    std::istringstream line(reply.substr(at + 8));
+    std::string list;
+    std::getline(line, list);
+    std::istringstream items(list);
+    for (std::string name; std::getline(items, name, ',');) {
+        while (!name.empty() && (name.back() == '\r' || name.back() == ' ')) name.pop_back();
+        if (!name.empty()) names.insert(name);
+    }
+    return names;
+}
+
+CheckResult check_browser_session_default(const std::string&) {
+    CheckResult result = with_started_gate("session-default", {}, [](const StartedGate& gate, const Context& context, CheckResult& inner) {
+        cdp(context, "set");
+        bool closed = false;
+        for (int tenth = 0; tenth < 600 && !closed; ++tenth) {
+            closed = proc::start_time_of(gate.browser_pid) != gate.browser_started;
+            if (!closed) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        return names;
-    };
+        if (!closed) {
+            inner.failures.push_back("the browser (pid " + std::to_string(gate.browser_pid) + ") was still running 60 s after Browser.close");
+            return;
+        }
+        const auto restarted = context.run("start", 120000);
+        if (restarted.exit_code != 0) inner.failures.push_back("start after the browser closed did not report a ready browser: " + restarted.err.substr(0, 300));
+        const std::set<std::string> names = cookie_names_of(cdp(context, "get"));
+        if (!names.count("sess")) inner.failures.push_back("with PLAYWRITER_RESTORE_SESSION unset a session cookie did not survive a stop and start: the launcher must restore the last session by default (a caller's envDefaults are not applied by Claude Code, so the variable is not set there)");
+    });
+    if (result.failures.empty()) result.summary = "with PLAYWRITER_RESTORE_SESSION unset a session cookie survives a stop and start, because the launcher restores the last session by default";
+    return result;
+}
+
+CheckResult check_browser_session_restore(const std::string&) {
+    const auto names_in = [](const std::string& reply) { return cookie_names_of(reply); };
     const auto run_case = [&names_in](const std::string& label, const std::string& restore, const std::vector<std::string>& required, const std::vector<std::string>& absent) {
         return with_started_gate(label, {"PLAYWRITER_RESTORE_SESSION=" + restore}, [restore, required, absent, &names_in](const StartedGate& gate, const Context& context, CheckResult& inner) {
             cdp(context, "set");
@@ -737,6 +760,12 @@ CheckResult check_browser_fingerprint_mismatch(const std::string&) {
 }
 
 CheckResult check_browser_log_bounds(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_session_default(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;
