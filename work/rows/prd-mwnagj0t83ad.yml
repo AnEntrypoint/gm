@@ -1,9 +1,0 @@
-id: "prd-mwnagj0t83ad"
-kind: "prd"
-title: "Run tools/gm-continue-setup.mjs read-only and fix each defect it reports"
-body: "The setup script exists in the checkout (tools/gm-continue-setup.mjs, 4539 bytes) but was not run in the 2026-11-19 QoL run. Witness: run it read-only, paste its plan output, and resolve every defect it names with a row."
-status: "resolved"
-createdAt: "2026-11-19T08:28:54.221Z"
-witnessEvent: 56
-witnessCommit: "46298e52"
-resolvedAt: "2026-11-19T08:28:59.494Z"

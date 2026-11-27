@@ -13,8 +13,8 @@ This skill is not in the host Skill tool. Read it once per connection: with Read
 
 The first line of a task names its phase.
 
-- Phase A: make every change and commit each one locally as it is made, with no push, so a stop loses nothing. For each change, add a line to docs/PENDING_VALIDATION.md naming the file, the row and the witness it needs. Build, test, gate and browser steps wait for Phase B. Finish with a witness that lists the commits and the pending lines.
-- Phase B: run each witness recorded for this peer in docs/PENDING_VALIDATION.md, fix what fails, rerun only what failed, and push as soon as they are green. Cover only your own lines and do not wait on other peers. Then install or deploy as the project's own instructions say, and check that what now runs is the build you validated.
+- Phase A: make every change and commit each one locally as it is made, with no push, so a stop loses nothing. For each change, name the file, the row and the witness it needs in your report. Build, test, gate and browser steps wait for Phase B. Finish with a witness that lists the commits and the pending lines.
+- Phase B: run each witness named for this peer in this stretch, fix what fails, rerun only what failed, and push as soon as they are green. Cover only your own lines and do not wait on other peers. Then install or deploy as the project's own instructions say, and check that what now runs is the build you validated.
 
 ## Time
 

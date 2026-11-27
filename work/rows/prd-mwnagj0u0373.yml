@@ -1,9 +1,0 @@
-id: "prd-mwnagj0u0373"
-kind: "prd"
-title: "Add a stable run-level friction ledger path and check it exists"
-body: "The QoL request names a gm-friction list in the dispatch ledger, but docs/GM_FRICTION.md is absent in gm (gm.stat_file ENOENT, action 31). The docstudio friction list lives in another repo. Witness: a named ledger path in docs/ that stat_file resolves, with the items it holds."
-status: "resolved"
-createdAt: "2026-11-19T08:28:54.222Z"
-witnessEvent: 66
-witnessCommit: "b5aa4dcc"
-resolvedAt: "2026-11-19T08:29:30.479Z"
