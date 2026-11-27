@@ -6352,3 +6352,10 @@ Checks added: check-pre-push-gate (mutation: a hook that exits 0 fails it on 4 a
 - Change: tools/phase-b/window.sh sets refs/remotes/origin/main to HEAD for every part, after saving the real ref, and an EXIT trap restores the saved ref. The build part no longer sets the ref itself.
 - Witness: witnesses3 run alone on the commit that carries this item prints WITNESSES_DONE FAILED=0, and after the window git rev-parse refs/remotes/origin/main equals the real origin.
 - Red: none; the change sets which ref each part sees, and the update checks are the witness.
+
+### 87. The dev skill's post-push step is one gate ticket: rebuild and install (Phase A, not run)
+
+- Found by queue item 2: each push needed a manual rebuild of build/release and an install, and the step named a build that might be stale.
+- Change: skills/dev/SKILL.md, the post-push bullet, now one detached gate ticket (gm-install) that runs cmake --build build/release, the install of build/release, and gm-tool installed, with GATE_TREE set to HEAD.
+- Witness: the gm-install ticket run after the push of the commit that carries this item ends with check-installed ok (the installed build equals HEAD).
+- Red: none; the change is the documented step, and the witness is the step itself.
